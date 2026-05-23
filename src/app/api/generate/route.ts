@@ -20,6 +20,14 @@ function getGeminiClient() {
   });
 }
 
+function getCerebrasClient() {
+  return new OpenAI({
+    apiKey: process.env.CEREBRAS_API_KEY!,
+    baseURL: 'https://api.cerebras.ai/v1',
+    maxRetries: 0,
+  });
+}
+
 // ─── Malaysian supplier knowledge by region ───────────────────────────────────
 const MALAYSIA_SUPPLIER_CONTEXT = `
 MALAYSIA INDUSTRIAL SUPPLIER DIRECTORY (select by proximity to project state):
@@ -523,7 +531,7 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini';
+  provider: 'chutes' | 'gemini' | 'cerebras';
   model: string;
   max_tokens: number;
 }
@@ -539,7 +547,11 @@ function buildModelRoster(): ModelConfig[] {
     // Gemini 1.5 Flash 8B — even smaller, often available when others aren't
     roster.push({ provider: 'gemini', model: 'gemini-1.5-flash-8b', max_tokens: 8000 });
   }
-  // Chutes — fallback when all Gemini models are rate-limited
+  // Cerebras Llama 3.3 70B — fast, generous free tier
+  if (process.env.CEREBRAS_API_KEY) {
+    roster.push({ provider: 'cerebras', model: 'llama-3.3-70b', max_tokens: 8000 });
+  }
+  // Chutes — last resort
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
   }
@@ -549,6 +561,7 @@ function buildModelRoster(): ModelConfig[] {
 
 function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'chutes') return getChutesClient();
+  if (cfg.provider === 'cerebras') return getCerebrasClient();
   return getGeminiClient();
 }
 

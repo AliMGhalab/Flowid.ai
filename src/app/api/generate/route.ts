@@ -539,9 +539,9 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras only — testing this provider in isolation
+  // Cerebras Qwen 235B — fast, large, returns clean JSON
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'llama-3.3-70b', max_tokens: 8000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 8000 });
   }
 
   return roster;

@@ -11,13 +11,6 @@ function getChutesClient() {
   });
 }
 
-function getGroqClient() {
-  return new OpenAI({
-    apiKey: process.env.GROQ_API_KEY ?? 'placeholder',
-    baseURL: 'https://api.groq.com/openai/v1',
-  });
-}
-
 function getGeminiClient() {
   return new OpenAI({
     apiKey: process.env.GEMINI_API_KEY ?? 'placeholder',
@@ -501,12 +494,10 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 //
 // Priority order:
 //  1. Gemini 2.0 Flash      — primary (free, 1M TPD, huge context)
-//  2. Chutes / DeepSeek V3  — if CHUTES_API_KEY is set (paid quality fallback)
-//  3. Groq llama-3.3-70b    — free, 100k TPD
-//  (llama-3.1-8b-instant removed — 6000 TPM cap is too low for our prompts)
+//  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'groq';
+  provider: 'chutes' | 'gemini';
   model: string;
   max_tokens: number;
 }
@@ -518,20 +509,17 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.GEMINI_API_KEY) {
     roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
   }
-  // Chutes second — paid, used only if Gemini fails
+  // Chutes second — fallback when Gemini rate-limits
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
   }
-  // Groq large model as final fallback
-  roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
 
   return roster;
 }
 
 function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'chutes') return getChutesClient();
-  if (cfg.provider === 'gemini') return getGeminiClient();
-  return getGroqClient();
+  return getGeminiClient();
 }
 
 function isRateLimitError(err: unknown): boolean {
@@ -564,7 +552,7 @@ async function generateWithModel(
     ],
     max_tokens: cfg.max_tokens,
     temperature: 0.2,
-    // Force JSON-only output (supported by Gemini, DeepSeek/Chutes, and Groq)
+    // Force JSON-only output (supported by Gemini and DeepSeek/Chutes)
     response_format: { type: 'json_object' },
   });
 
@@ -582,7 +570,7 @@ export async function POST(request: NextRequest) {
   try {
     const input: ProjectInput = await request.json();
 
-    // Walk through the model roster (Chutes → Gemini → Groq fallbacks)
+    // Walk through the model roster (Gemini → Chutes fallback)
     const models = buildModelRoster();
     let lastError: unknown;
 

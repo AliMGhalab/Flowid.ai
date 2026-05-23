@@ -418,42 +418,136 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
 }`;
 }
 
+// ─── JSON extraction & repair ─────────────────────────────────────────────────
+
+function extractJSON(raw: string): string {
+  let s = raw.trim();
+
+  // Strip markdown code fences
+  const fenceMatch = s.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (fenceMatch) s = fenceMatch[1].trim();
+
+  // If it doesn't start with '{', try to find the first '{'
+  const braceStart = s.indexOf('{');
+  if (braceStart > 0) s = s.slice(braceStart);
+
+  return s;
+}
+
+function repairTruncatedJSON(s: string): string {
+  // Count open braces/brackets to determine how many closers are needed
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escape = false;
+
+  for (const ch of s) {
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+  }
+
+  // Remove trailing incomplete token (comma, colon, partial string)
+  let trimmed = s.trimEnd();
+  // Remove trailing comma before we close
+  trimmed = trimmed.replace(/,\s*$/, '');
+  // If we ended mid-string, close it
+  if (inString) trimmed += '"';
+
+  // Close open brackets/braces in reverse order
+  for (let i = 0; i < brackets; i++) trimmed += ']';
+  for (let i = 0; i < braces; i++) trimmed += '}';
+
+  return trimmed;
+}
+
+function parseAIResponse(content: string): Record<string, unknown> {
+  const jsonStr = extractJSON(content);
+
+  // First attempt: parse as-is
+  try {
+    return JSON.parse(jsonStr) as Record<string, unknown>;
+  } catch {
+    // Second attempt: repair truncated JSON
+    try {
+      const repaired = repairTruncatedJSON(jsonStr);
+      return JSON.parse(repaired) as Record<string, unknown>;
+    } catch {
+      throw new SyntaxError('Could not parse or repair AI response as JSON');
+    }
+  }
+}
+
+// ─── Response validation ──────────────────────────────────────────────────────
+
+function validateRecommendation(rec: Record<string, unknown>): void {
+  const required = ['summary', 'system_type', 'components', 'cost_estimate'];
+  for (const field of required) {
+    if (!rec[field]) throw new Error(`AI response missing required field: "${field}"`);
+  }
+  if (!Array.isArray(rec.components)) throw new Error('AI response "components" is not an array');
+  if ((rec.components as unknown[]).length === 0) throw new Error('AI response returned zero components');
+}
+
+// ─── Single generation attempt ────────────────────────────────────────────────
+
+async function generate(input: ProjectInput): Promise<Record<string, unknown>> {
+  const client = getClient();
+  const completion = await client.chat.completions.create({
+    model: process.env.CHUTES_API_KEY
+      ? 'deepseek-ai/DeepSeek-V3.2-TEE'
+      : 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildPrompt(input) },
+    ],
+    max_tokens: 16000,
+    temperature: 0.2,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) throw new Error('Empty response from AI model');
+
+  const recommendation = parseAIResponse(content);
+  validateRecommendation(recommendation);
+  return recommendation;
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   try {
     const input: ProjectInput = await request.json();
 
-    const client = getClient();
-    const completion = await client.chat.completions.create({
-      model: process.env.CHUTES_API_KEY
-        ? 'deepseek-ai/DeepSeek-V3.2-TEE'
-        : 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildPrompt(input) },
-      ],
-      max_tokens: 16000,
-      temperature: 0.2,
-    });
+    // Attempt 1
+    let recommendation: Record<string, unknown>;
+    try {
+      recommendation = await generate(input);
+    } catch (firstErr) {
+      console.warn('[/api/generate] first attempt failed:', firstErr);
+      // Attempt 2 — single retry
+      try {
+        recommendation = await generate(input);
+      } catch (secondErr) {
+        console.error('[/api/generate] second attempt failed:', secondErr);
+        throw secondErr;
+      }
+    }
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) throw new Error('Empty response from AI model');
-
-    let jsonStr = content.trim();
-    const fenceMatch = jsonStr.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
-    if (fenceMatch) jsonStr = fenceMatch[1].trim();
-
-    const recommendation = JSON.parse(jsonStr);
     return NextResponse.json({ recommendation });
   } catch (error) {
     console.error('[/api/generate]', error);
-    if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { error: 'AI returned malformed JSON. Please try again.' },
-        { status: 500 }
-      );
-    }
+    const message =
+      error instanceof Error ? error.message : 'Generation failed';
+    const isMalformed =
+      error instanceof SyntaxError || message.includes('JSON') || message.includes('field');
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Generation failed' },
+      { error: isMalformed ? 'AI returned an incomplete response. Please try again.' : message },
       { status: 500 }
     );
   }

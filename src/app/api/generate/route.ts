@@ -217,6 +217,22 @@ INSTRUCTIONS:
 6. For EVERY component assign a confidence_level (0–100) representing how confident you are this is the optimal choice for this specific application, fluid, and environment. Be honest — flag lower confidence when the application is unusual or specs are ambiguous.
 7. For EVERY component assign lifespan_years (expected service life before replacement/major overhaul under normal operating conditions in Malaysian climate) and lifespan_notes explaining key factors.
 8. Assign overall_confidence (0–100) for the entire recommendation.
+9. COMPONENT COMPLETENESS — think like a real process engineer designing a P&ID. A functional fluid system is never just a pump and two valves. Include EVERY component the system physically needs to operate safely, at the scale specified, within budget. Scale and budget determine quantity and grade — not whether a component type exists. Required categories to consider for every system:
+   - PUMPS: main duty pump(s) sized to scale; include standby/spare if budget and criticality warrant it
+   - ISOLATION VALVES: suction and discharge isolation on every pump, at every branch takeoff, before/after every major item of plant
+   - CHECK VALVES: on every pump discharge to prevent backflow
+   - CONTROL VALVES: flow control, pressure control, or on/off service as needed for the process
+   - PRESSURE RELIEF / SAFETY VALVES: on every pressurised vessel, pump discharge header, and deadleg — required by DOSH FMA 1967
+   - STRAINERS / FILTERS: Y-strainer or basket strainer on every pump suction; process filters if fluid requires it
+   - VESSELS / TANKS: buffer tanks, day tanks, expansion vessels, separator vessels as appropriate for the fluid and process
+   - PIPE FITTINGS: elbows, reducers, flanges, gaskets — sized to pipe schedule; include as a line item by set/lot
+   - FLEXIBLE CONNECTIONS: pump suction and discharge flexible couplings to absorb vibration
+   - PRESSURE GAUGES: local indication at pump suction, discharge, and key process points
+   - INSTRUMENTATION: flow transmitter, pressure transmitters, temperature elements, level instruments as needed for safe operation
+   - MOTOR CONTROL: motor starter or VFD panel for each pump/motor; include control panel if multiple drives
+   - ELECTRICAL: cables, conduit, earthing — size to motor kW and site classification
+   - STRUCTURAL: pump base frames, equipment skid, pipe supports — especially for larger systems
+   Do NOT omit a category just to reduce count. Omit a category ONLY if it genuinely does not apply to this specific fluid, application, and system boundary. The number of components is determined entirely by what the system requires at the given scale and budget — a small system may have 8 components, a large industrial system may have 25+.
 
 Return ONLY this JSON (fill every field with real engineering and commercial data):
 {
@@ -365,7 +381,7 @@ export async function POST(request: NextRequest) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildPrompt(input) },
       ],
-      max_tokens: 8192,
+      max_tokens: 16000,
       temperature: 0.2,
     });
 

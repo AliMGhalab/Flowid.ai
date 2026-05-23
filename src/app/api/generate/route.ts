@@ -5,9 +5,20 @@ import type { ProjectInput } from '@/types';
 export const maxDuration = 120;
 
 function getClient() {
+  // Uses Groq (free) by default; swap to Chutes when credits are added
+  const groqKey = process.env.GROQ_API_KEY;
+  const chutesKey = process.env.CHUTES_API_KEY;
+
+  if (chutesKey) {
+    return new OpenAI({
+      apiKey: chutesKey,
+      baseURL: 'https://llm.chutes.ai/v1',
+    });
+  }
+
   return new OpenAI({
-    apiKey: process.env.CHUTES_API_KEY ?? 'placeholder',
-    baseURL: 'https://llm.chutes.ai/v1',
+    apiKey: groqKey ?? 'placeholder',
+    baseURL: 'https://api.groq.com/openai/v1',
   });
 }
 
@@ -299,7 +310,9 @@ export async function POST(request: NextRequest) {
 
     const client = getClient();
     const completion = await client.chat.completions.create({
-      model: 'deepseek-ai/DeepSeek-V3.2-TEE',
+      model: process.env.CHUTES_API_KEY
+        ? 'deepseek-ai/DeepSeek-V3.2-TEE'
+        : 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildPrompt(input) },

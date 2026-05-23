@@ -161,11 +161,36 @@ function buildScaleText(input: ProjectInput): string {
   return parts.length > 0 ? parts.join(' | ') : 'Not specified — estimate from application description';
 }
 
+const FLUID_LABELS: Record<string, string> = {
+  water_utility: 'Utility Water', cooling_water: 'Cooling Water',
+  demineralised_water: 'Demineralised Water', ultrapure_water: 'Ultrapure / Deionised Water (UPW)',
+  purified_water: 'Purified Water (PW)', wfi: 'Water for Injection (WFI)',
+  seawater: 'Seawater', chilled_water: 'Chilled Water',
+  steam_lp: 'Low-Pressure Steam (< 10 bar)', steam_hp: 'High-Pressure Steam (≥ 10 bar)',
+  crude_oil: 'Crude Oil', natural_gas: 'Natural Gas', lng: 'LNG (Liquefied Natural Gas)',
+  fuel_oil: 'Fuel Oil', hydraulic_oil: 'Hydraulic Oil', glycol: 'Glycol Solution (MEG/DEG/TEG)',
+  cpo: 'Crude Palm Oil (CPO)', pko: 'Palm Kernel Oil (PKO)',
+  rbdpo: 'RBD Palm Oil / Olein / Stearin', palm_fatty_acid: 'Palm Fatty Acid Distillate (PFAD)',
+  compressed_air: 'Compressed Air', nitrogen: 'Nitrogen (N₂)',
+  co2: 'CO₂', ammonia_gas: 'Ammonia (NH₃)',
+  latex: 'Natural Rubber Latex', ammonia_latex: 'Ammonia Solution (Latex Preservation)',
+  formic_acid: 'Formic / Acetic Acid (Coagulant)',
+  refrigerant_hfc: 'HFC Refrigerant (R134a/R410A)', refrigerant_co2: 'CO₂ Refrigerant (R744)',
+  refrigerant_nh3: 'Ammonia Refrigerant (R717)',
+  slurry: 'Slurry / Abrasive Fluid', palm_effluent: 'Palm Oil Mill Effluent (POME)',
+  wastewater: 'Industrial Wastewater / Effluent',
+};
+
+function getFluidName(input: ProjectInput): string {
+  const needsSpec = ['chemical_acid', 'chemical_alkali', 'chemical_solvent', 'chemical_other', 'other'];
+  if (needsSpec.includes(input.fluidType)) {
+    return input.customFluidType ?? input.fluidType.replace(/_/g, ' ');
+  }
+  return FLUID_LABELS[input.fluidType] ?? input.fluidType.replace(/_/g, ' ');
+}
+
 function buildPrompt(input: ProjectInput): string {
-  const fluidName =
-    input.fluidType === 'chemical' || input.fluidType === 'other'
-      ? input.customFluidType
-      : input.fluidType.replace(/_/g, ' ');
+  const fluidName = getFluidName(input);
 
   const state = stateLabel(input.malaysiaState);
   const env = input.siteEnvironment.replace(/_/g, ' ');

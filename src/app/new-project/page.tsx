@@ -40,32 +40,162 @@ const SITE_ENVIRONMENTS = [
   { value: 'other', label: 'Other' },
 ];
 
-const ALL_FLUID_TYPES = [
-  { value: 'water', label: 'Water' },
-  { value: 'steam', label: 'Steam' },
-  { value: 'hydraulic_oil', label: 'Hydraulic Oil' },
-  { value: 'compressed_air', label: 'Compressed Air' },
-  { value: 'natural_gas', label: 'Natural Gas' },
-  { value: 'fuel_oil', label: 'Fuel Oil' },
-  { value: 'refrigerant', label: 'Refrigerant' },
-  { value: 'slurry', label: 'Slurry / Abrasive Fluid' },
-  { value: 'chemical', label: 'Chemical (specify below)' },
-  { value: 'other', label: 'Other (specify below)' },
+// ─── Fluid groups (shown as optgroups in the select) ─────────────────────────
+const FLUID_GROUPS = [
+  {
+    group: 'Water',
+    fluids: [
+      { value: 'water_utility',       label: 'Water — Utility / General' },
+      { value: 'cooling_water',       label: 'Water — Cooling Tower / Condenser' },
+      { value: 'demineralised_water', label: 'Water — Demineralised' },
+      { value: 'ultrapure_water',     label: 'Water — Ultrapure / Deionised (UPW)' },
+      { value: 'purified_water',      label: 'Water — Purified (PW, Pharma)' },
+      { value: 'wfi',                 label: 'Water — Water for Injection (WFI)' },
+      { value: 'seawater',            label: 'Water — Seawater / Brackish' },
+      { value: 'chilled_water',       label: 'Water — Chilled (HVAC)' },
+    ],
+  },
+  {
+    group: 'Steam',
+    fluids: [
+      { value: 'steam_lp', label: 'Steam — Low Pressure (< 10 bar)' },
+      { value: 'steam_hp', label: 'Steam — High Pressure (≥ 10 bar)' },
+    ],
+  },
+  {
+    group: 'Hydrocarbons & Fuels',
+    fluids: [
+      { value: 'crude_oil',    label: 'Crude Oil' },
+      { value: 'natural_gas',  label: 'Natural Gas / Process Gas' },
+      { value: 'lng',          label: 'LNG (Liquefied Natural Gas)' },
+      { value: 'fuel_oil',     label: 'Fuel Oil (Diesel / HFO)' },
+      { value: 'hydraulic_oil',label: 'Hydraulic Oil' },
+      { value: 'glycol',       label: 'Glycol Solution (MEG / DEG / TEG)' },
+    ],
+  },
+  {
+    group: 'Palm Oil & Derivatives',
+    fluids: [
+      { value: 'cpo', label: 'Crude Palm Oil (CPO)' },
+      { value: 'pko', label: 'Palm Kernel Oil (PKO)' },
+      { value: 'rbdpo', label: 'RBD Palm Oil / Olein / Stearin' },
+      { value: 'palm_fatty_acid', label: 'Palm Fatty Acid Distillate (PFAD)' },
+    ],
+  },
+  {
+    group: 'Gases',
+    fluids: [
+      { value: 'compressed_air', label: 'Compressed Air' },
+      { value: 'nitrogen',       label: 'Nitrogen (N₂ — Gas / Liquid)' },
+      { value: 'co2',            label: 'CO₂ (Carbon Dioxide)' },
+      { value: 'ammonia_gas',    label: 'Ammonia (NH₃ — Refrigerant)' },
+    ],
+  },
+  {
+    group: 'Rubber & Latex',
+    fluids: [
+      { value: 'latex',          label: 'Latex (Natural Rubber)' },
+      { value: 'ammonia_latex',  label: 'Ammonia Solution (Latex Preservation)' },
+      { value: 'formic_acid',    label: 'Formic / Acetic Acid (Coagulant)' },
+    ],
+  },
+  {
+    group: 'Refrigeration',
+    fluids: [
+      { value: 'refrigerant_hfc', label: 'Refrigerant — HFC (R134a, R410A, R22)' },
+      { value: 'refrigerant_co2', label: 'Refrigerant — CO₂ (R744, Transcritical)' },
+      { value: 'refrigerant_nh3', label: 'Refrigerant — Ammonia (R717, Industrial)' },
+    ],
+  },
+  {
+    group: 'Process Slurries & Solids-Laden',
+    fluids: [
+      { value: 'slurry',       label: 'Slurry / Abrasive Fluid' },
+      { value: 'palm_effluent',label: 'Palm Oil Mill Effluent (POME)' },
+      { value: 'wastewater',   label: 'Industrial Wastewater / Effluent' },
+    ],
+  },
+  {
+    group: 'Chemicals (specify below)',
+    fluids: [
+      { value: 'chemical_acid',    label: 'Chemical — Acid (HCl, H₂SO₄, HNO₃…)' },
+      { value: 'chemical_alkali',  label: 'Chemical — Alkali / Caustic (NaOH, KOH…)' },
+      { value: 'chemical_solvent', label: 'Chemical — Solvent (IPA, Acetone, Toluene…)' },
+      { value: 'chemical_other',   label: 'Chemical — Other (specify below)' },
+    ],
+  },
+  {
+    group: 'Other',
+    fluids: [
+      { value: 'other', label: 'Other — Not listed (specify below)' },
+    ],
+  },
 ];
 
-// Industry defines which fluids are relevant
+// Flat list for lookups
+const ALL_FLUID_TYPES = FLUID_GROUPS.flatMap((g) => g.fluids);
+
+// Values that require a custom specification field
+const NEEDS_SPEC = new Set([
+  'chemical_acid', 'chemical_alkali', 'chemical_solvent', 'chemical_other', 'other',
+]);
+
+// ─── Industries (Malaysia-focused, ordered by prominence) ────────────────────
 const INDUSTRY_FLUIDS: Record<string, string[]> = {
-  'Oil & Gas':        ['natural_gas', 'fuel_oil', 'hydraulic_oil', 'water', 'chemical', 'other'],
-  'Chemical':         ['chemical', 'water', 'steam', 'hydraulic_oil', 'compressed_air', 'other'],
-  'Food & Beverage':  ['water', 'steam', 'refrigerant', 'compressed_air', 'other'],
-  'Pharmaceutical':   ['water', 'steam', 'chemical', 'compressed_air', 'other'],
-  'Water Treatment':  ['water', 'chemical', 'slurry', 'compressed_air', 'other'],
-  'Power Generation': ['water', 'steam', 'fuel_oil', 'natural_gas', 'hydraulic_oil', 'other'],
-  'Mining':           ['water', 'slurry', 'hydraulic_oil', 'chemical', 'compressed_air', 'other'],
-  'HVAC':             ['water', 'refrigerant', 'steam', 'compressed_air', 'other'],
-  'Marine':           ['water', 'fuel_oil', 'hydraulic_oil', 'compressed_air', 'other'],
-  'Manufacturing':    ['water', 'hydraulic_oil', 'compressed_air', 'steam', 'chemical', 'other'],
-  'Other':            ALL_FLUID_TYPES.map((f) => f.value),
+  'Oil & Gas': [
+    'crude_oil', 'natural_gas', 'lng', 'fuel_oil', 'hydraulic_oil',
+    'glycol', 'cooling_water', 'water_utility', 'chemical_acid', 'chemical_alkali', 'other',
+  ],
+  'Palm Oil & Oleochemical': [
+    'cpo', 'pko', 'rbdpo', 'palm_fatty_acid', 'steam_lp', 'steam_hp',
+    'water_utility', 'chemical_alkali', 'chemical_acid', 'palm_effluent', 'other',
+  ],
+  'Petrochemical': [
+    'natural_gas', 'fuel_oil', 'glycol', 'steam_hp', 'steam_lp',
+    'cooling_water', 'chemical_acid', 'chemical_alkali', 'chemical_solvent',
+    'nitrogen', 'compressed_air', 'other',
+  ],
+  'Semiconductor & Electronics': [
+    'ultrapure_water', 'cooling_water', 'nitrogen', 'compressed_air',
+    'chemical_acid', 'chemical_alkali', 'chemical_solvent', 'co2', 'other',
+  ],
+  'Food & Beverage': [
+    'water_utility', 'steam_lp', 'chilled_water', 'co2', 'compressed_air',
+    'refrigerant_hfc', 'refrigerant_nh3', 'chemical_alkali', 'chemical_acid', 'other',
+  ],
+  'Water & Wastewater Treatment': [
+    'water_utility', 'seawater', 'wastewater', 'palm_effluent',
+    'chemical_acid', 'chemical_alkali', 'slurry', 'compressed_air', 'other',
+  ],
+  'Power Generation': [
+    'demineralised_water', 'steam_hp', 'steam_lp', 'cooling_water',
+    'fuel_oil', 'natural_gas', 'lng', 'chemical_acid', 'chemical_alkali', 'other',
+  ],
+  'Pharmaceutical': [
+    'purified_water', 'wfi', 'steam_lp', 'nitrogen', 'compressed_air',
+    'chemical_solvent', 'chemical_acid', 'chemical_alkali', 'other',
+  ],
+  'Rubber & Latex': [
+    'latex', 'ammonia_latex', 'formic_acid', 'steam_lp',
+    'water_utility', 'ammonia_gas', 'chemical_acid', 'other',
+  ],
+  'Marine & Offshore': [
+    'seawater', 'fuel_oil', 'hydraulic_oil', 'compressed_air',
+    'water_utility', 'lng', 'natural_gas', 'chemical_other', 'other',
+  ],
+  'Chemical Manufacturing': [
+    'chemical_acid', 'chemical_alkali', 'chemical_solvent', 'chemical_other',
+    'steam_hp', 'steam_lp', 'cooling_water', 'nitrogen', 'compressed_air', 'other',
+  ],
+  'HVAC & Building Services': [
+    'chilled_water', 'cooling_water', 'refrigerant_hfc', 'refrigerant_co2',
+    'refrigerant_nh3', 'steam_lp', 'compressed_air', 'water_utility', 'other',
+  ],
+  'Mining': [
+    'water_utility', 'slurry', 'hydraulic_oil', 'chemical_acid',
+    'chemical_alkali', 'compressed_air', 'wastewater', 'other',
+  ],
+  'Other / General': ALL_FLUID_TYPES.map((f) => f.value),
 };
 
 const INDUSTRIES = Object.keys(INDUSTRY_FLUIDS);
@@ -131,7 +261,7 @@ const DEFAULT_FORM: ProjectInput = {
   projectName: '',
   malaysiaState: '',
   siteEnvironment: 'indoor_industrial',
-  fluidType: 'water',
+  fluidType: 'crude_oil',
   customFluidType: '',
   application: '',
   industry: 'Oil & Gas',
@@ -174,9 +304,12 @@ export default function NewProjectPage() {
     }
   };
 
-  const availableFluids = ALL_FLUID_TYPES.filter((f) =>
-    (INDUSTRY_FLUIDS[form.industry] ?? ALL_FLUID_TYPES.map((f) => f.value)).includes(f.value)
-  );
+  const allowedValues = new Set(INDUSTRY_FLUIDS[form.industry] ?? ALL_FLUID_TYPES.map((f) => f.value));
+
+  const availableGroups = FLUID_GROUPS.map((g) => ({
+    ...g,
+    fluids: g.fluids.filter((f) => allowedValues.has(f.value)),
+  })).filter((g) => g.fluids.length > 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,7 +364,7 @@ export default function NewProjectPage() {
     );
   }
 
-  const needsCustomFluid = form.fluidType === 'chemical' || form.fluidType === 'other';
+  const needsCustomFluid = NEEDS_SPEC.has(form.fluidType);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -379,8 +512,12 @@ export default function NewProjectPage() {
                   onChange={(e) => set('fluidType', e.target.value)}
                   className={selectCls}
                 >
-                  {availableFluids.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
+                  {availableGroups.map((g) => (
+                    <optgroup key={g.group} label={`── ${g.group}`}>
+                      {g.fluids.map((f) => (
+                        <option key={f.value} value={f.value}>{f.label}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </SelectWrapper>

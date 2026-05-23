@@ -494,19 +494,58 @@ function validateRecommendation(rec: Record<string, unknown>): void {
   if ((rec.components as unknown[]).length === 0) throw new Error('AI response returned zero components');
 }
 
+// ─── Model roster — tried in order until one succeeds ────────────────────────
+//
+// Primary:  llama-3.3-70b-versatile  — best quality, 100k TPD on Groq free tier
+// Fallback: llama-3.1-8b-instant     — lighter, 500k TPD on Groq free tier
+// Last:     gemma2-9b-it             — extra fallback, separate quota
+//
+// Chutes (DeepSeek) takes priority when CHUTES_API_KEY is set.
+
+interface ModelConfig {
+  model: string;
+  max_tokens: number;
+}
+
+function getGroqModels(): ModelConfig[] {
+  return [
+    { model: 'llama-3.3-70b-versatile', max_tokens: 8000 },
+    { model: 'llama-3.1-8b-instant',    max_tokens: 6000 },
+    { model: 'gemma2-9b-it',            max_tokens: 6000 },
+  ];
+}
+
+function isRateLimitError(err: unknown): boolean {
+  if (err instanceof Error) {
+    return (
+      err.message.includes('429') ||
+      err.message.toLowerCase().includes('rate limit') ||
+      err.message.toLowerCase().includes('too many') ||
+      ('status' in err && (err as { status: number }).status === 429)
+    );
+  }
+  return false;
+}
+
 // ─── Single generation attempt ────────────────────────────────────────────────
 
-async function generate(input: ProjectInput): Promise<Record<string, unknown>> {
+async function generateWithModel(
+  input: ProjectInput,
+  cfg: ModelConfig
+): Promise<Record<string, unknown>> {
   const client = getClient();
+  const model = process.env.CHUTES_API_KEY ? 'deepseek-ai/DeepSeek-V3.2-TEE' : cfg.model;
+  const max_tokens = process.env.CHUTES_API_KEY ? 12000 : cfg.max_tokens;
+
+  console.log(`[/api/generate] trying model=${model} max_tokens=${max_tokens}`);
+
   const completion = await client.chat.completions.create({
-    model: process.env.CHUTES_API_KEY
-      ? 'deepseek-ai/DeepSeek-V3.2-TEE'
-      : 'llama-3.3-70b-versatile',
+    model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: buildPrompt(input) },
     ],
-    max_tokens: 16000,
+    max_tokens,
     temperature: 0.2,
   });
 
@@ -524,26 +563,54 @@ export async function POST(request: NextRequest) {
   try {
     const input: ProjectInput = await request.json();
 
-    // Attempt 1
-    let recommendation: Record<string, unknown>;
-    try {
-      recommendation = await generate(input);
-    } catch (firstErr) {
-      console.warn('[/api/generate] first attempt failed:', firstErr);
-      // Attempt 2 — single retry
+    // If Chutes is configured, use it directly (single attempt)
+    if (process.env.CHUTES_API_KEY) {
+      const recommendation = await generateWithModel(input, { model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
+      return NextResponse.json({ recommendation });
+    }
+
+    // Groq: walk through model roster, skip on rate-limit errors, retry on JSON errors
+    const models = getGroqModels();
+    let lastError: unknown;
+
+    for (const cfg of models) {
       try {
-        recommendation = await generate(input);
-      } catch (secondErr) {
-        console.error('[/api/generate] second attempt failed:', secondErr);
-        throw secondErr;
+        const recommendation = await generateWithModel(input, cfg);
+        return NextResponse.json({ recommendation });
+      } catch (err) {
+        lastError = err;
+        if (isRateLimitError(err)) {
+          console.warn(`[/api/generate] rate-limited on ${cfg.model}, trying next model`);
+          continue; // try next model
+        }
+        // JSON / validation error — retry once with same model before moving on
+        console.warn(`[/api/generate] parse error on ${cfg.model}, retrying once`);
+        try {
+          const recommendation = await generateWithModel(input, cfg);
+          return NextResponse.json({ recommendation });
+        } catch (retryErr) {
+          lastError = retryErr;
+          if (isRateLimitError(retryErr)) continue; // rate limited on retry, try next model
+          // Non-rate-limit failure — try next model anyway
+          console.warn(`[/api/generate] retry also failed on ${cfg.model}, trying next model`);
+          continue;
+        }
       }
     }
 
-    return NextResponse.json({ recommendation });
+    // All models exhausted
+    throw lastError ?? new Error('All AI models failed');
+
   } catch (error) {
     console.error('[/api/generate]', error);
-    const message =
-      error instanceof Error ? error.message : 'Generation failed';
+    const message = error instanceof Error ? error.message : 'Generation failed';
+
+    if (isRateLimitError(error)) {
+      return NextResponse.json(
+        { error: 'AI service is busy right now. Please try again in a few minutes.' },
+        { status: 429 }
+      );
+    }
     const isMalformed =
       error instanceof SyntaxError || message.includes('JSON') || message.includes('field');
     return NextResponse.json(

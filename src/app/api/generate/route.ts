@@ -564,6 +564,8 @@ async function generateWithModel(
     ],
     max_tokens: cfg.max_tokens,
     temperature: 0.2,
+    // Force JSON-only output (supported by Gemini, DeepSeek/Chutes, and Groq)
+    response_format: { type: 'json_object' },
   });
 
   const content = completion.choices[0]?.message?.content;

@@ -60,7 +60,7 @@ export default function SignupPage() {
             <Droplets className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="mt-1 text-slate-400">Start designing fluid systems with AI</p>
+          <p className="mt-1 text-slate-400">Get a full BOM, risk register &amp; cost estimate in under 4 minutes</p>
         </div>
 
         {/* Card */}
@@ -94,7 +94,7 @@ export default function SignupPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  placeholder="Jane Smith"
+                  placeholder="Ahmad Razif"
                   className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-colors focus:border-blue-500"
                 />
               </div>
@@ -150,7 +150,8 @@ export default function SignupPage() {
           </p>
 
           <p className="mt-4 text-center text-xs text-slate-500">
-            By signing up you agree to our terms of service.
+            By signing up you agree to use outputs as engineering guidance only,
+            not as certified designs under DOSH or any regulatory framework.
           </p>
         </div>
       </div>

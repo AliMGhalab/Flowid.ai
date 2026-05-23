@@ -110,7 +110,7 @@ function RiskBadge({ level }: { level: string }) {
 const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'components', label: 'Components', icon: Package },
-  { id: 'piping', label: 'Piping & Instruments', icon: GitBranch },
+  { id: 'piping', label: 'Piping & Instrumentation', icon: GitBranch },
   { id: 'risks', label: 'Risk Assessment', icon: ShieldAlert },
   { id: 'maintenance', label: 'Maintenance', icon: Wrench },
   { id: 'costs', label: 'Cost Estimate', icon: DollarSign },

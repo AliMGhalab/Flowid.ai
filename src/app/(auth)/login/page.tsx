@@ -55,7 +55,7 @@ export default function LoginPage() {
             <Droplets className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-          <p className="mt-1 text-slate-400">Sign in to your Flowid.ai account</p>
+          <p className="mt-1 text-slate-400">Your engineering reports are saved and waiting</p>
         </div>
 
         {/* Card */}

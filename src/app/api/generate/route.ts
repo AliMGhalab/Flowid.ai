@@ -122,7 +122,24 @@ Your recommendations:
 - Reference Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS) where applicable
 - Consider tropical climate, humidity, and corrosion for outdoor equipment in Malaysia
 
-CRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no text outside the JSON.`;
+═══════════════════════════════════════════════════════════════════
+ABSOLUTE OUTPUT REQUIREMENT — READ THIS TWICE BEFORE RESPONDING:
+═══════════════════════════════════════════════════════════════════
+Your entire response MUST be a single raw JSON object and NOTHING else.
+
+PROHIBITED:
+- NO markdown code fences (no \`\`\`json, no \`\`\`, never)
+- NO explanatory text before the JSON
+- NO explanatory text after the JSON
+- NO comments inside the JSON
+- NO trailing commentary like "Here is the BOM:"
+
+REQUIRED:
+- The FIRST character of your output MUST be {
+- The LAST character of your output MUST be }
+- Everything in between must be parseable by JSON.parse() in JavaScript
+
+If you wrap output in markdown or add any text, the system will fail to parse it and the engineer will get an error. Output ONLY the raw JSON object.`;
 
 function stateLabel(val: string): string {
   const map: Record<string, string> = {
@@ -419,15 +436,22 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
 function extractJSON(raw: string): string {
   let s = raw.trim();
 
-  // Strip markdown code fences
-  const fenceMatch = s.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  // Strip markdown code fences (handles ```json, ```JSON, ``` etc.)
+  const fenceMatch = s.match(/```(?:json|JSON)?\s*\n?([\s\S]*?)\n?```/);
   if (fenceMatch) s = fenceMatch[1].trim();
 
-  // If it doesn't start with '{', try to find the first '{'
-  const braceStart = s.indexOf('{');
-  if (braceStart > 0) s = s.slice(braceStart);
+  // Find the LAST closing brace — discards trailing prose like "Hope this helps!"
+  const lastBrace = s.lastIndexOf('}');
+  // Find the FIRST opening brace — discards leading prose like "Here is the BOM:"
+  const firstBrace = s.indexOf('{');
 
-  return s;
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    s = s.slice(firstBrace, lastBrace + 1);
+  } else if (firstBrace > 0) {
+    s = s.slice(firstBrace);
+  }
+
+  return s.trim();
 }
 
 function repairTruncatedJSON(s: string): string {
@@ -524,12 +548,16 @@ function clientForConfig(cfg: ModelConfig) {
 
 function isRateLimitError(err: unknown): boolean {
   if (err instanceof Error) {
-    return (
+    if (
       err.message.includes('429') ||
       err.message.toLowerCase().includes('rate limit') ||
-      err.message.toLowerCase().includes('too many') ||
-      ('status' in err && (err as { status: number }).status === 429)
-    );
+      err.message.toLowerCase().includes('too many')
+    ) return true;
+    if ('status' in err) {
+      const status = (err as { status: number }).status;
+      // Treat 429 and 5xx (server-side unavailable) as "skip to next model"
+      if (status === 429 || (status >= 500 && status < 600)) return true;
+    }
   }
   return false;
 }

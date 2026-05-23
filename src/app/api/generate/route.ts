@@ -217,24 +217,74 @@ INSTRUCTIONS:
 6. For EVERY component assign a confidence_level (0–100) representing how confident you are this is the optimal choice for this specific application, fluid, and environment. Be honest — flag lower confidence when the application is unusual or specs are ambiguous.
 7. For EVERY component assign lifespan_years (expected service life before replacement/major overhaul under normal operating conditions in Malaysian climate) and lifespan_notes explaining key factors.
 8. Assign overall_confidence (0–100) for the entire recommendation.
-9. COMPONENT COMPLETENESS — think like a real process engineer designing a P&ID. A functional fluid system is never just a pump and two valves. Include EVERY component the system physically needs to operate safely, at the scale specified, within budget. Scale and budget determine quantity and grade — not whether a component type exists. Required categories to consider for every system:
-   - PUMPS: main duty pump(s) sized to scale; include standby/spare if budget and criticality warrant it
-   - ISOLATION VALVES: suction and discharge isolation on every pump, at every branch takeoff, before/after every major item of plant
-   - CHECK VALVES: on every pump discharge to prevent backflow
-   - CONTROL VALVES: flow control, pressure control, or on/off service as needed for the process
-   - PRESSURE RELIEF / SAFETY VALVES: on every pressurised vessel, pump discharge header, and deadleg — required by DOSH FMA 1967
-   - STRAINERS / FILTERS: Y-strainer or basket strainer on every pump suction; process filters if fluid requires it
-   - VESSELS / TANKS: buffer tanks, day tanks, expansion vessels, separator vessels as appropriate for the fluid and process
-   - PIPE FITTINGS: elbows, reducers, flanges, gaskets — sized to pipe schedule; include as a line item by set/lot
-   - FLEXIBLE CONNECTIONS: pump suction and discharge flexible couplings to absorb vibration
-   - PRESSURE GAUGES: local indication at pump suction, discharge, and key process points
-   - INSTRUMENTATION: flow transmitter, pressure transmitters, temperature elements, level instruments as needed for safe operation
-   - MOTOR CONTROL: motor starter or VFD panel for each pump/motor; include control panel if multiple drives
-   - ELECTRICAL: cables, conduit, earthing — size to motor kW and site classification
-   - STRUCTURAL: pump base frames, equipment skid, pipe supports — especially for larger systems
-   Do NOT omit a category just to reduce count. Omit a category ONLY if it genuinely does not apply to this specific fluid, application, and system boundary. The number of components is determined entirely by what the system requires at the given scale and budget — a small system may have 8 components, a large industrial system may have 25+.
+9. COMPLETE BILL OF MATERIALS — You are producing a procurement-ready BOM, not a summary. Every item that must be purchased and installed must appear as a separate line item. Think like a process engineer walking a P&ID from fluid source to final destination: trace every pipe run, every connection, every instrument tap, every power circuit, and list what is physically needed.
 
-Return ONLY this JSON (fill every field with real engineering and commercial data):
+MANDATORY — include ALL of the following that apply to this system. Quantity and grade are determined by scale and budget; their PRESENCE is determined by engineering necessity:
+
+ROTATING EQUIPMENT
+• Main duty pump(s) — sized to flow rate and head; specify type (centrifugal/screw/gear/diaphragm) and kW
+• Standby/spare pump — include if criticality or continuous operation warrants it (most process plants: yes)
+• Mechanical seals or seal pots — if applicable to pump type and fluid
+• Coupling and coupling guard — for each pump-motor set
+
+STATIC EQUIPMENT / VESSELS
+• Suction header / feed tank / buffer vessel — where fluid is drawn from
+• Discharge header or receiver vessel — where fluid is delivered to (if applicable)
+• Expansion vessel — for closed systems (hot water, chilled water, steam condensate)
+• Chemical dosing pot or quill — if chemical injection is in scope
+• Separator / filter housing — if fluid requires solids removal
+
+VALVES (every physical valve is a line item)
+• Suction isolation valve — one per pump (gate or butterfly)
+• Discharge isolation valve — one per pump (gate or butterfly)
+• Check valve (non-return) — one per pump discharge
+• Pressure relief valve (PSV) — on every pressurised header and vessel (DOSH mandatory)
+• Control valve (modulating or on/off) — for flow, pressure, or temperature regulation
+• Drain valve — at every low point on headers and vessels
+• Vent valve — at every high point on pressurised lines
+• Sample valve — at key process points if fluid requires quality sampling
+• Bypass valve set — around any control valve or critical item requiring maintenance bypass
+
+PIPING & FITTINGS (as a lot/set line item unless individual items are major cost drivers)
+• Pipe — specify material, schedule, total length estimate
+• Elbows, tees, reducers — as a fabrication lot
+• Flanges and gaskets — as a set matching the pipe schedule
+• Flexible hose / expansion joint — at pump suction and discharge to isolate vibration
+• Pipe supports, clamps, hangers — sized to pipe size and span
+
+INSTRUMENTATION (every transmitter and local gauge is a line item)
+• Flow meter / flow transmitter — on main process line (FT-101)
+• Pressure transmitter — pump suction (PT-101) and discharge (PT-102), and at key process points
+• Local pressure gauge — at pump suction, discharge, and vessel nozzles
+• Temperature transmitter or thermowell — if temperature is a process variable
+• Level transmitter or level gauge — on every vessel or tank
+• Differential pressure transmitter — across filters and heat exchangers if applicable
+• Analytical instrument — pH, conductivity, turbidity if fluid quality monitoring is required
+
+ELECTRICAL & CONTROL
+• Motor control centre (MCC) or soft starter / VFD panel — one per motor; combine into one panel if co-located
+• Control panel / local control station — for operator interface
+• Power cables — from MCC to each motor (size to kW and distance)
+• Instrument cables and conduit — for 4-20mA / digital signals
+• Earthing / bonding system — mandatory for flammable fluids (DOSH), recommended for all
+
+STRUCTURAL & CIVIL
+• Equipment skid or base frame — for pump sets and packaged equipment
+• Pipe support steelwork — for headers and long runs
+• Bund / drip tray — for chemical, oil, or hazardous fluid containment (DOE requirement)
+• Access platforms or ladders — if equipment is elevated
+
+SAFETY & ANCILLARY
+• Safety shower and eyewash station — if fluid is hazardous (chemical, acid, caustic)
+• Fire and gas detectors — for flammable or toxic fluids (BOMBA requirement)
+• Thermal insulation and cladding — for hot or cold services
+• Heat tracing system — if fluid congeals or freezes at ambient temperature
+• Commissioning strainer — temporary fine-mesh strainer to protect equipment during startup
+• Commissioning spares kit — gaskets, seals, consumables for initial startup
+
+SELF-CHECK BEFORE FINALISING: Review your component list against this system's P&ID mentally. Ask: "Can this system actually start up, run continuously, be isolated for maintenance, be drained, be vented, be instrumented, be controlled, be protected from overpressure, and be safely shut down — using only the components I have listed?" If any of those answers is no, add the missing items. The number of components is dictated entirely by the engineering requirements of the system at the given scale and budget. Do NOT artificially reduce the count.
+
+Return ONLY this JSON (fill every field with real engineering and commercial data). Keep text fields concise — 1–2 sentences maximum for notes, procedures, and descriptions. Use the token budget for complete component coverage, not verbose prose.
 {
   "summary": "2-3 sentence system overview including scale and key design decisions",
   "system_type": "system classification",

@@ -28,6 +28,8 @@ import {
   Loader2,
   RefreshCw,
   Shuffle,
+  FileDown,
+  Sheet,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -771,6 +773,8 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [fetching, setFetching] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingXLSX, setExportingXLSX] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -806,6 +810,36 @@ export default function ProjectPage() {
         <p className="text-slate-400">No recommendation data for this project.</p>
       </div>
     );
+  }
+
+  async function handleExportPDF() {
+    if (!project) return;
+    setExportingPDF(true);
+    try {
+      const { exportToPDF } = await import('@/lib/exportProject');
+      await exportToPDF(project);
+      toast.success('PDF report downloaded');
+    } catch (err) {
+      console.error(err);
+      toast.error('PDF export failed');
+    } finally {
+      setExportingPDF(false);
+    }
+  }
+
+  async function handleExportExcel() {
+    if (!project) return;
+    setExportingXLSX(true);
+    try {
+      const { exportToExcel } = await import('@/lib/exportProject');
+      await exportToExcel(project);
+      toast.success('Excel BOM downloaded');
+    } catch (err) {
+      console.error(err);
+      toast.error('Excel export failed');
+    } finally {
+      setExportingXLSX(false);
+    }
   }
 
   return (
@@ -844,6 +878,36 @@ export default function ProjectPage() {
               <Clock className="h-3 w-3" />
               {rec.lead_time_weeks}w lead time
             </span>
+
+            {/* Export buttons */}
+            <div className="flex items-center gap-2 ml-1">
+              <button
+                onClick={handleExportPDF}
+                disabled={exportingPDF}
+                title="Download PDF Engineering Report"
+                className="flex items-center gap-1.5 rounded-xl border border-blue-600/40 bg-blue-600/10 px-3 py-1.5 text-xs font-semibold text-blue-400 transition-colors hover:bg-blue-600/20 hover:border-blue-500 disabled:opacity-60"
+              >
+                {exportingPDF ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                {exportingPDF ? 'Generating…' : 'Export PDF'}
+              </button>
+              <button
+                onClick={handleExportExcel}
+                disabled={exportingXLSX}
+                title="Download Excel BOM & Data"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-600/40 bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-600/20 hover:border-emerald-500 disabled:opacity-60"
+              >
+                {exportingXLSX ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sheet className="h-3.5 w-3.5" />
+                )}
+                {exportingXLSX ? 'Generating…' : 'Export Excel'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

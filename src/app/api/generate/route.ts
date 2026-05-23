@@ -164,6 +164,7 @@ INSTRUCTIONS:
 2. All costs in MYR. Use Malaysian market prices including SST and local logistics.
 3. For suppliers: pick brands with offices or distributors nearest to ${state}. If in East Malaysia, account for extra logistics cost.
 4. Apply relevant Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS as applicable).
+5. For EVERY component, provide exactly 2 alternatives from DIFFERENT Malaysian suppliers with realistic MYR costs. Alternatives should offer genuine trade-offs (e.g. cost saving, faster local availability, equivalent spec from a competing brand).
 
 Return ONLY this JSON (fill every field with real engineering and commercial data):
 {
@@ -191,7 +192,25 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
       "model": "real model/series example",
       "unit_cost_myr": 0,
       "total_cost_myr": 0,
-      "notes": "selection rationale, Malaysian compliance note if applicable"
+      "notes": "selection rationale, Malaysian compliance note if applicable",
+      "alternatives": [
+        {
+          "name": "alternative component name",
+          "supplier": "alternative Malaysian supplier",
+          "model": "alternative model",
+          "reason": "why this is a viable alternative (cost saving, faster delivery, local stock, etc.)",
+          "unit_cost_myr": 0,
+          "total_cost_myr": 0
+        },
+        {
+          "name": "second alternative component name",
+          "supplier": "second alternative Malaysian supplier",
+          "model": "second alternative model",
+          "reason": "why this is a viable alternative",
+          "unit_cost_myr": 0,
+          "total_cost_myr": 0
+        }
+      ]
     }
   ],
   "piping": {

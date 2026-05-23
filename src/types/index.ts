@@ -20,6 +20,15 @@ export interface ProcessParameters {
   basis: string;
 }
 
+export interface ComponentAlternative {
+  name: string;
+  supplier: string;
+  model: string;
+  reason: string;
+  unit_cost_myr: number;
+  total_cost_myr: number;
+}
+
 export interface SystemComponent {
   id: string;
   name: string;
@@ -29,9 +38,14 @@ export interface SystemComponent {
   material: string;
   supplier: string;
   model: string;
-  unit_cost_usd: number;
-  total_cost_usd: number;
+  // MYR fields (new)
+  unit_cost_myr?: number;
+  total_cost_myr?: number;
+  // USD fields (legacy fallback)
+  unit_cost_usd?: number;
+  total_cost_usd?: number;
   notes: string;
+  alternatives?: ComponentAlternative[];
 }
 
 export interface Instrument {
@@ -42,7 +56,8 @@ export interface Instrument {
   range: string;
   material: string;
   supplier: string;
-  unit_cost_usd: number;
+  unit_cost_myr?: number;
+  unit_cost_usd?: number;
 }
 
 export interface Risk {
@@ -93,13 +108,28 @@ export interface PipingSpec {
 }
 
 export interface CostEstimate {
-  equipment_cost_usd: number;
-  installation_cost_usd: number;
-  engineering_cost_usd: number;
-  commissioning_cost_usd: number;
-  total_cost_usd: number;
+  equipment_cost_myr?: number;
+  installation_cost_myr?: number;
+  engineering_cost_myr?: number;
+  commissioning_cost_myr?: number;
+  total_cost_myr?: number;
+  // legacy USD fallback
+  equipment_cost_usd?: number;
+  installation_cost_usd?: number;
+  engineering_cost_usd?: number;
+  commissioning_cost_usd?: number;
+  total_cost_usd?: number;
   within_budget: boolean;
   budget_notes: string;
+}
+
+export interface LivePriceResult {
+  componentId: string;
+  found: boolean;
+  price_myr?: number;
+  price_text?: string;
+  source_name?: string;
+  source_url?: string;
 }
 
 export interface FluidSystemRecommendation {

@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { getProject } from '@/lib/firestore';
-import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule } from '@/types';
+import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule, LivePriceResult, ComponentAlternative } from '@/types';
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -21,6 +21,13 @@ import {
   AlertTriangle,
   XCircle,
   Info,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Shuffle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -177,87 +184,220 @@ function OverviewTab({ project }: { project: Project }) {
 
 function ComponentsTab({ components }: { components: SystemComponent[] }) {
   const [filter, setFilter] = useState('all');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [livePrices, setLivePrices] = useState<Record<string, LivePriceResult>>({});
+  const [priceLoading, setPriceLoading] = useState(false);
+
   const categories = ['all', ...Array.from(new Set(components.map((c) => c.category)))];
   const filtered = filter === 'all' ? components : components.filter((c) => c.category === filter);
 
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const checkLivePrices = useCallback(async () => {
+    setPriceLoading(true);
+    try {
+      const payload = components.map((c) => ({
+        id: c.id,
+        name: c.name,
+        model: c.model,
+        supplier: c.supplier,
+      }));
+      const res = await fetch('/api/price-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ components: payload }),
+      });
+      if (!res.ok) throw new Error('Price check request failed');
+      const data = await res.json();
+      const map: Record<string, LivePriceResult> = {};
+      for (const r of (data.results ?? []) as LivePriceResult[]) {
+        map[r.componentId] = r;
+      }
+      setLivePrices(map);
+      const found = Object.values(map).filter((r) => r.found).length;
+      toast.success(`Found live prices for ${found} of ${components.length} components`);
+    } catch {
+      toast.error('Live price check failed — check your TAVILY_API_KEY');
+    } finally {
+      setPriceLoading(false);
+    }
+  }, [components]);
+
   return (
     <div className="space-y-4">
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
-              filter === cat
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Top bar: filter + live price button */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setFilter(cat)}
+              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                filter === cat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={checkLivePrices}
+          disabled={priceLoading}
+          className="flex shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+        >
+          {priceLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : Object.keys(livePrices).length > 0 ? (
+            <RefreshCw className="h-4 w-4" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
+          {priceLoading
+            ? 'Searching suppliers…'
+            : Object.keys(livePrices).length > 0
+            ? 'Refresh Live Prices'
+            : 'Check Live Prices'}
+        </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-800 bg-slate-900">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Component</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell">Specification</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hidden lg:table-cell">Supplier / Model</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Total Cost</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800 bg-slate-900">
-            {filtered.map((c) => (
-              <tr key={c.id} className="transition-colors hover:bg-slate-800/50">
-                <td className="px-4 py-3">
-                  <span className="font-mono text-xs text-blue-400">{c.id}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-white">{c.name}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5">
+      {/* Hint when no Tavily key */}
+      {!priceLoading && Object.keys(livePrices).length === 0 && (
+        <p className="text-xs text-slate-500">
+          Click &ldquo;Check Live Prices&rdquo; to search real Malaysian supplier websites for current pricing.
+          Requires a <span className="text-slate-300">TAVILY_API_KEY</span> environment variable.
+        </p>
+      )}
+
+      {/* Component cards */}
+      <div className="space-y-3">
+        {filtered.map((c) => {
+          const cost = c.total_cost_myr ?? c.total_cost_usd ?? 0;
+          const unitCost = c.unit_cost_myr ?? c.unit_cost_usd ?? 0;
+          const live = livePrices[c.id];
+          const isExpanded = expandedIds.has(c.id);
+          const hasAlts = (c.alternatives?.length ?? 0) > 0;
+
+          return (
+            <div
+              key={c.id}
+              className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden"
+            >
+              {/* Main component row */}
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
+                {/* Left: ID + name + category */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="font-mono text-xs text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">
+                      {c.id}
+                    </span>
                     <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${CATEGORY_BADGE[c.category] ?? CATEGORY_BADGE.other}`}>
                       {c.category}
                     </span>
-                    {c.material && (
-                      <span className="text-xs text-slate-500 hidden sm:inline">{c.material.split(' ')[0]}</span>
+                    {/* Live price badge */}
+                    {live?.found && (
+                      <a
+                        href={live.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {live.price_text} · {live.source_name}
+                      </a>
+                    )}
+                    {live && !live.found && (
+                      <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-500">
+                        No online price found
+                      </span>
                     )}
                   </div>
+                  <h4 className="font-semibold text-white">{c.name}</h4>
+                  <p className="mt-0.5 text-xs text-slate-400">{c.supplier} · {c.model}</p>
+                  <p className="mt-1 text-xs text-slate-500 line-clamp-2">{c.specification}</p>
                   {c.notes && (
-                    <p className="mt-1 text-xs text-slate-500 line-clamp-2 md:hidden">{c.notes}</p>
+                    <p className="mt-1 text-xs text-slate-600 italic line-clamp-1">{c.notes}</p>
                   )}
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-400 hidden md:table-cell max-w-xs">
-                  <p className="line-clamp-2">{c.specification}</p>
-                  {c.notes && <p className="mt-1 text-slate-500 line-clamp-1">{c.notes}</p>}
-                </td>
-                <td className="px-4 py-3 hidden lg:table-cell">
-                  <div className="text-sm text-white">{c.supplier}</div>
-                  <div className="text-xs text-slate-400">{c.model}</div>
-                </td>
-                <td className="px-4 py-3 text-right text-sm text-white">{c.quantity}</td>
-                <td className="px-4 py-3 text-right font-medium text-green-400">
-                  {formatCurrency((c as SystemComponent & { total_cost_myr?: number }).total_cost_myr ?? c.total_cost_usd)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-slate-700 bg-slate-800/60">
-              <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-white">
-                Equipment Subtotal
-              </td>
-              <td className="px-4 py-3 text-right font-bold text-green-400">
-                {formatCurrency(filtered.reduce((sum, c) => sum + ((c as SystemComponent & { total_cost_myr?: number }).total_cost_myr ?? c.total_cost_usd ?? 0), 0))}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+                </div>
+
+                {/* Right: qty + costs + expand toggle */}
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Qty: {c.quantity}</p>
+                    <p className="text-xs text-slate-500">Unit: {formatCurrency(unitCost)}</p>
+                    <p className="font-bold text-green-400">{formatCurrency(cost)}</p>
+                  </div>
+                  {hasAlts && (
+                    <button
+                      onClick={() => toggleExpand(c.id)}
+                      className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
+                    >
+                      <Shuffle className="h-3.5 w-3.5 text-amber-400" />
+                      {c.alternatives!.length} alternative{c.alternatives!.length !== 1 ? 's' : ''}
+                      {isExpanded ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Alternatives panel */}
+              {hasAlts && isExpanded && (
+                <div className="border-t border-slate-800 bg-slate-950/60 px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
+                    Alternative Options
+                  </p>
+                  <div className="space-y-2">
+                    {c.alternatives!.map((alt: ComponentAlternative, i: number) => (
+                      <div
+                        key={i}
+                        className="flex flex-col gap-1 rounded-xl border border-amber-500/10 bg-amber-500/5 p-3 sm:flex-row sm:items-start sm:gap-4"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white text-sm">{alt.name}</p>
+                          <p className="text-xs text-slate-400">{alt.supplier} · {alt.model}</p>
+                          <p className="mt-1 text-xs text-amber-300/70 italic">{alt.reason}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs text-slate-500">Unit: {formatCurrency(alt.unit_cost_myr)}</p>
+                          <p className="font-semibold text-amber-400">{formatCurrency(alt.total_cost_myr)}</p>
+                          {cost > 0 && alt.total_cost_myr > 0 && (
+                            <p className={`text-xs ${alt.total_cost_myr < cost ? 'text-green-400' : 'text-red-400'}`}>
+                              {alt.total_cost_myr < cost
+                                ? `Save ${formatCurrency(cost - alt.total_cost_myr)}`
+                                : `+${formatCurrency(alt.total_cost_myr - cost)}`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Subtotal */}
+      <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3">
+        <span className="text-sm font-semibold text-white">
+          Equipment Subtotal ({filtered.length} items)
+        </span>
+        <span className="font-bold text-green-400">
+          {formatCurrency(filtered.reduce((sum, c) => sum + (c.total_cost_myr ?? c.total_cost_usd ?? 0), 0))}
+        </span>
       </div>
     </div>
   );
@@ -316,7 +456,7 @@ function PipingTab({ project }: { project: Project }) {
                     <td className="px-4 py-3 text-xs text-slate-400">{inst.material}</td>
                     <td className="px-4 py-3 text-xs text-slate-300">{inst.supplier}</td>
                     <td className="px-4 py-3 text-right font-medium text-green-400">
-                      {formatCurrency((inst as Instrument & { unit_cost_myr?: number }).unit_cost_myr ?? inst.unit_cost_usd)}
+                      {formatCurrency((inst as Instrument & { unit_cost_myr?: number }).unit_cost_myr ?? inst.unit_cost_usd ?? 0)}
                     </td>
                   </tr>
                 ))}

@@ -325,6 +325,18 @@ Apply the standard HAZOP guidewords to the system's main process line and key no
   • ELECTRICAL FAULT — short circuit, VFD failure, earth fault (BOMBA-relevant)
 TARGET: aim for 20 or more risk entries covering the above guidewords across system nodes. Each entry must have a distinct hazard, cause, and consequence — no duplicates. Reference DOSH FMA 1967, BOMBA UBBL fire safety, SIRIM electrical certification, or DOE environmental code in mitigations where applicable.
 
+MANDATORY SECTIONS — these JSON blocks MUST be populated, never null or empty:
+  • piping — fill with actual pipe material, diameter, schedule, connection type, and design notes
+  • instrumentation — populate with AT LEAST 4 instrument tags covering essential process control:
+      FT-xxx (flow transmitter on main line)
+      PT-xxx (pressure transmitter on pump discharge)
+      PT-xxx (pressure transmitter on pump suction, OR receiver/vessel)
+      TT-xxx (temperature transmitter where thermal monitoring is relevant)
+      Plus level transmitter (LT) if vessels exist, or analytical instruments (AT/QT) if chemistry matters
+  • risk_assessment.risks — 20+ entries per HAZOP guidewords (see above)
+  • engineering_calculations — every applicable field filled with computed numbers
+If any of these sections is missing or empty, the engineer cannot use the report. Do NOT shortcut these to save tokens.
+
 ENGINEERING CALCULATIONS — fill the engineering_calculations block with REAL numbers derived from the process parameters you set:
   • NPSHa from: atmospheric pressure + suction static head − vapour pressure − friction losses
   • TDH = static head + friction head + velocity head
@@ -408,7 +420,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
     }
   ],
   "piping": {
-    "material": "pipe material",
+    "material": "pipe material (e.g. Carbon Steel, SS316L, HDPE)",
     "nominal_diameter_inch": 2,
     "schedule": "40",
     "connection_type": "flanged|threaded|welded",
@@ -418,12 +430,22 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
   },
   "instrumentation": [
     {
-      "tag": "PT-101",
-      "description": "Pressure Transmitter — Pump Discharge",
+      "tag": "FT-101",
+      "description": "Flow Transmitter — Main Process Line",
       "type": "pressure|temperature|flow|level|analytical",
       "service": "what it monitors",
-      "range": "0-150 PSI",
-      "material": "316 SS wetted parts",
+      "range": "0-100 m³/hr",
+      "material": "wetted material",
+      "supplier": "Malaysian supplier with city",
+      "unit_cost_myr": 0
+    },
+    {
+      "tag": "PT-101",
+      "description": "Pressure Transmitter — Pump Discharge",
+      "type": "pressure",
+      "service": "Pump discharge pressure monitoring",
+      "range": "0-10 bar(g)",
+      "material": "SS316 wetted parts",
       "supplier": "Malaysian supplier with city",
       "unit_cost_myr": 0
     }

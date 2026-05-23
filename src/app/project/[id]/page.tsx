@@ -543,6 +543,22 @@ function PipingTab({ project }: { project: Project }) {
   const rec = project.recommendation!;
   const piping = rec.piping;
   const instruments = rec.instrumentation ?? [];
+  const hasPipingData = piping && (piping.material || piping.nominal_diameter_inch);
+  const hasInstruments = instruments.length > 0;
+
+  if (!hasPipingData && !hasInstruments) {
+    return (
+      <SectionCard title="Piping & Instrumentation">
+        <div className="py-8 text-center">
+          <p className="mb-2 text-slate-300">No piping or instrumentation data in this project.</p>
+          <p className="text-xs text-slate-500">
+            The AI may have skipped these fields. Try regenerating the project, or check the BOM for piping items
+            and instruments embedded as components.
+          </p>
+        </div>
+      </SectionCard>
+    );
+  }
 
   return (
     <div className="space-y-4">

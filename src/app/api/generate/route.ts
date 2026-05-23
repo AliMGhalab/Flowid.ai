@@ -500,10 +500,10 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 // ─── Model roster — tried in order until one succeeds ────────────────────────
 //
 // Priority order:
-//  1. Chutes / DeepSeek V3  — if CHUTES_API_KEY is set (paid, best quality)
-//  2. Gemini 2.0 Flash      — if GEMINI_API_KEY is set (free, 1M TPD)
+//  1. Gemini 2.0 Flash      — primary (free, 1M TPD, huge context)
+//  2. Chutes / DeepSeek V3  — if CHUTES_API_KEY is set (paid quality fallback)
 //  3. Groq llama-3.3-70b    — free, 100k TPD
-//  4. Groq llama-3.1-8b     — free, 500k TPD (last resort)
+//  (llama-3.1-8b-instant removed — 6000 TPM cap is too low for our prompts)
 
 interface ModelConfig {
   provider: 'chutes' | 'gemini' | 'groq';
@@ -514,15 +514,16 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  if (process.env.CHUTES_API_KEY) {
-    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
-  }
+  // Gemini first — biggest free quota, handles large prompts
   if (process.env.GEMINI_API_KEY) {
     roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
   }
-  // Always include Groq as fallback (key may or may not work)
+  // Chutes second — paid, used only if Gemini fails
+  if (process.env.CHUTES_API_KEY) {
+    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
+  }
+  // Groq large model as final fallback
   roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
-  roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant',    max_tokens: 6000 });
 
   return roster;
 }

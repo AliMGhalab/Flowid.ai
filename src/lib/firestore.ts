@@ -14,6 +14,11 @@ import {
 import { db } from './firebase';
 import type { Project, ProjectInput, FluidSystemRecommendation } from '@/types';
 
+// Firestore does not accept undefined values — strip them before saving
+function stripUndefined<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj, (_, v) => (v === undefined ? null : v)));
+}
+
 export async function createProject(
   userId: string,
   input: ProjectInput,
@@ -23,8 +28,8 @@ export async function createProject(
     userId,
     projectName: input.projectName,
     status: 'complete',
-    input,
-    recommendation,
+    input: stripUndefined(input),
+    recommendation: stripUndefined(recommendation),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

@@ -8,6 +8,11 @@ export interface ProjectInput {
   industry: string;
   budget: number;
   specialRequirements?: string;
+  // Scale
+  scaleFlowRateValue?: number;
+  scaleFlowRateUnit?: 'L/min' | 'm³/hr' | 'GPM';
+  scaleVolumeMonthlyValue?: number;
+  scaleVolumeMonthlyUnit?: 'm³/month' | 'L/month' | 'gallons/month';
 }
 
 export interface ProcessParameters {
@@ -27,6 +32,7 @@ export interface ComponentAlternative {
   reason: string;
   unit_cost_myr: number;
   total_cost_myr: number;
+  confidence_level?: number;
 }
 
 export interface SystemComponent {
@@ -38,7 +44,7 @@ export interface SystemComponent {
   material: string;
   supplier: string;
   model: string;
-  // MYR fields (new)
+  // MYR fields
   unit_cost_myr?: number;
   total_cost_myr?: number;
   // USD fields (legacy fallback)
@@ -46,6 +52,10 @@ export interface SystemComponent {
   total_cost_usd?: number;
   notes: string;
   alternatives?: ComponentAlternative[];
+  // New fields
+  confidence_level?: number;      // 0–100: AI confidence this is the right choice
+  lifespan_years?: number;        // Expected years before replacement/major overhaul
+  lifespan_notes?: string;        // Conditions affecting lifespan
 }
 
 export interface Instrument {
@@ -109,6 +119,7 @@ export interface PipingSpec {
 
 export interface CostEstimate {
   equipment_cost_myr?: number;
+  transportation_cost_myr?: number;
   installation_cost_myr?: number;
   engineering_cost_myr?: number;
   commissioning_cost_myr?: number;
@@ -136,6 +147,7 @@ export interface FluidSystemRecommendation {
   summary: string;
   system_type: string;
   design_basis: string;
+  overall_confidence?: number;    // 0–100: overall recommendation confidence
   process_parameters: ProcessParameters;
   components: SystemComponent[];
   piping: PipingSpec;

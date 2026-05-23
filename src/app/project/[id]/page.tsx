@@ -37,6 +37,32 @@ function formatCurrency(n: number) {
   return 'RM ' + new Intl.NumberFormat('en-MY', { maximumFractionDigits: 0 }).format(n ?? 0);
 }
 
+function ConfidenceBadge({ level }: { level?: number }) {
+  if (level === undefined || level === null) return null;
+  const color =
+    level >= 80 ? 'bg-green-400/10 text-green-400 border-green-400/20' :
+    level >= 60 ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20' :
+                  'bg-red-400/10 text-red-400 border-red-400/20';
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}>
+      {level}% confident
+    </span>
+  );
+}
+
+function LifespanBadge({ years, notes }: { years?: number; notes?: string }) {
+  if (!years) return null;
+  return (
+    <span
+      title={notes}
+      className="inline-flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-2 py-0.5 text-xs font-medium text-blue-300 cursor-help"
+    >
+      <Clock className="h-3 w-3" />
+      ~{years}yr lifespan
+    </span>
+  );
+}
+
 type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 const RISK_BADGE: Record<RiskLevel, string> = {
@@ -107,7 +133,7 @@ function OverviewTab({ project }: { project: Project }) {
     <div className="space-y-4">
       <SectionCard title="System Overview">
         <p className="mb-4 text-slate-300 leading-relaxed">{rec.summary}</p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-800/60 p-4">
             <p className="mb-1 text-xs text-slate-500">System Type</p>
             <p className="text-sm font-medium text-white">{rec.system_type}</p>
@@ -123,6 +149,12 @@ function OverviewTab({ project }: { project: Project }) {
             <p className="mb-1 text-xs text-slate-500">Overall Risk</p>
             <RiskBadge level={rec.risk_assessment?.overall_risk_level ?? 'low'} />
           </div>
+          {rec.overall_confidence !== undefined && (
+            <div className="rounded-xl bg-slate-800/60 p-4">
+              <p className="mb-2 text-xs text-slate-500">AI Confidence</p>
+              <ConfidenceBadge level={rec.overall_confidence} />
+            </div>
+          )}
         </div>
       </SectionCard>
 
@@ -138,6 +170,8 @@ function OverviewTab({ project }: { project: Project }) {
             { label: 'Location', value: project.input.malaysiaState?.replace(/_/g, ' ') ?? '—' },
             { label: 'Site Environment', value: project.input.siteEnvironment?.replace(/_/g, ' ') ?? '—' },
             { label: 'Budget', value: formatCurrency(project.input.budget) },
+            ...(project.input.scaleFlowRateValue ? [{ label: 'Flow Rate', value: `${project.input.scaleFlowRateValue} ${project.input.scaleFlowRateUnit}` }] : []),
+            ...(project.input.scaleVolumeMonthlyValue ? [{ label: 'Monthly Volume', value: `${project.input.scaleVolumeMonthlyValue} ${project.input.scaleVolumeMonthlyUnit}` }] : []),
           ].map((item) => (
             <div key={item.label} className="rounded-lg bg-slate-800/40 px-3 py-2.5">
               <p className="text-xs text-slate-500">{item.label}</p>
@@ -302,6 +336,8 @@ function ComponentsTab({ components }: { components: SystemComponent[] }) {
                     <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${CATEGORY_BADGE[c.category] ?? CATEGORY_BADGE.other}`}>
                       {c.category}
                     </span>
+                    <ConfidenceBadge level={c.confidence_level} />
+                    <LifespanBadge years={c.lifespan_years} notes={c.lifespan_notes} />
                     {/* Live price badge */}
                     {live?.found && (
                       <a
@@ -591,6 +627,7 @@ function MaintenanceTab({ schedule }: { schedule: MaintenanceSchedule[] }) {
 
 type MyrCostEst = {
   equipment_cost_myr?: number; equipment_cost_usd?: number;
+  transportation_cost_myr?: number;
   installation_cost_myr?: number; installation_cost_usd?: number;
   engineering_cost_myr?: number; engineering_cost_usd?: number;
   commissioning_cost_myr?: number; commissioning_cost_usd?: number;
@@ -603,17 +640,19 @@ function CostsTab({ project }: { project: Project }) {
   if (!est) return <p className="text-slate-400">No cost data available.</p>;
 
   const equip = est.equipment_cost_myr ?? est.equipment_cost_usd ?? 0;
+  const transport = est.transportation_cost_myr ?? 0;
   const install = est.installation_cost_myr ?? est.installation_cost_usd ?? 0;
   const eng = est.engineering_cost_myr ?? est.engineering_cost_usd ?? 0;
   const comm = est.commissioning_cost_myr ?? est.commissioning_cost_usd ?? 0;
   const total = est.total_cost_myr ?? est.total_cost_usd ?? 0;
 
   const rows = [
-    { label: 'Equipment', value: equip },
-    { label: 'Installation', value: install },
-    { label: 'Engineering', value: eng },
-    { label: 'Commissioning & Start-up', value: comm },
-  ];
+    { label: 'Equipment', value: equip, color: 'bg-blue-500' },
+    { label: 'Transportation & Logistics', value: transport, color: 'bg-orange-500' },
+    { label: 'Installation', value: install, color: 'bg-purple-500' },
+    { label: 'Engineering', value: eng, color: 'bg-cyan-500' },
+    { label: 'Commissioning & Start-up', value: comm, color: 'bg-green-500' },
+  ].filter((r) => r.value > 0);
 
   const budgetUsed = total > 0 ? (total / project.input.budget) * 100 : 0;
 
@@ -656,7 +695,7 @@ function CostsTab({ project }: { project: Project }) {
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className="h-full rounded-full bg-blue-500 transition-all"
+                    className={`h-full rounded-full transition-all ${row.color}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

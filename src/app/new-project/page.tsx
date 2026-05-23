@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { createProject } from '@/lib/firestore';
 import type { ProjectInput } from '@/types';
-import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin } from 'lucide-react';
+import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin, Scale } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ const SITE_ENVIRONMENTS = [
   { value: 'other', label: 'Other' },
 ];
 
-const FLUID_TYPES = [
+const ALL_FLUID_TYPES = [
   { value: 'water', label: 'Water' },
   { value: 'steam', label: 'Steam' },
   { value: 'hydraulic_oil', label: 'Hydraulic Oil' },
@@ -53,19 +53,25 @@ const FLUID_TYPES = [
   { value: 'other', label: 'Other (specify below)' },
 ];
 
-const INDUSTRIES = [
-  'Oil & Gas',
-  'Chemical',
-  'Food & Beverage',
-  'Pharmaceutical',
-  'Water Treatment',
-  'Power Generation',
-  'Mining',
-  'HVAC',
-  'Marine',
-  'Manufacturing',
-  'Other',
-];
+// Industry defines which fluids are relevant
+const INDUSTRY_FLUIDS: Record<string, string[]> = {
+  'Oil & Gas':        ['natural_gas', 'fuel_oil', 'hydraulic_oil', 'water', 'chemical', 'other'],
+  'Chemical':         ['chemical', 'water', 'steam', 'hydraulic_oil', 'compressed_air', 'other'],
+  'Food & Beverage':  ['water', 'steam', 'refrigerant', 'compressed_air', 'other'],
+  'Pharmaceutical':   ['water', 'steam', 'chemical', 'compressed_air', 'other'],
+  'Water Treatment':  ['water', 'chemical', 'slurry', 'compressed_air', 'other'],
+  'Power Generation': ['water', 'steam', 'fuel_oil', 'natural_gas', 'hydraulic_oil', 'other'],
+  'Mining':           ['water', 'slurry', 'hydraulic_oil', 'chemical', 'compressed_air', 'other'],
+  'HVAC':             ['water', 'refrigerant', 'steam', 'compressed_air', 'other'],
+  'Marine':           ['water', 'fuel_oil', 'hydraulic_oil', 'compressed_air', 'other'],
+  'Manufacturing':    ['water', 'hydraulic_oil', 'compressed_air', 'steam', 'chemical', 'other'],
+  'Other':            ALL_FLUID_TYPES.map((f) => f.value),
+};
+
+const INDUSTRIES = Object.keys(INDUSTRY_FLUIDS);
+
+const FLOW_RATE_UNITS: ProjectInput['scaleFlowRateUnit'][] = ['m³/hr', 'L/min', 'GPM'];
+const VOLUME_MONTHLY_UNITS: ProjectInput['scaleVolumeMonthlyUnit'][] = ['m³/month', 'L/month', 'gallons/month'];
 
 // ─── Field helpers ────────────────────────────────────────────────────────────
 
@@ -131,6 +137,10 @@ const DEFAULT_FORM: ProjectInput = {
   industry: 'Oil & Gas',
   budget: 50000,
   specialRequirements: '',
+  scaleFlowRateValue: undefined,
+  scaleFlowRateUnit: 'm³/hr',
+  scaleVolumeMonthlyValue: undefined,
+  scaleVolumeMonthlyUnit: 'm³/month',
 };
 
 export default function NewProjectPage() {
@@ -155,6 +165,19 @@ export default function NewProjectPage() {
     });
   };
 
+  // When industry changes, reset fluid to the first valid option for that industry
+  const handleIndustryChange = (industry: string) => {
+    set('industry', industry);
+    const allowedFluids = INDUSTRY_FLUIDS[industry] ?? ALL_FLUID_TYPES.map((f) => f.value);
+    if (!allowedFluids.includes(form.fluidType)) {
+      set('fluidType', allowedFluids[0]);
+    }
+  };
+
+  const availableFluids = ALL_FLUID_TYPES.filter((f) =>
+    (INDUSTRY_FLUIDS[form.industry] ?? ALL_FLUID_TYPES.map((f) => f.value)).includes(f.value)
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate(form);
@@ -170,9 +193,10 @@ export default function NewProjectPage() {
 
     try {
       setTimeout(() => setStatusMsg('Determining process parameters…'), 5000);
-      setTimeout(() => setStatusMsg('Selecting Malaysian suppliers…'), 12000);
-      setTimeout(() => setStatusMsg('Running risk assessment…'), 20000);
-      setTimeout(() => setStatusMsg('Compiling maintenance schedule & costs in MYR…'), 28000);
+      setTimeout(() => setStatusMsg('Selecting Malaysian suppliers by location…'), 12000);
+      setTimeout(() => setStatusMsg('Evaluating confidence levels…'), 20000);
+      setTimeout(() => setStatusMsg('Calculating transportation & total costs…'), 28000);
+      setTimeout(() => setStatusMsg('Running risk assessment & lifespan analysis…'), 36000);
 
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -219,7 +243,7 @@ export default function NewProjectPage() {
         <div>
           <h1 className="text-xl font-bold text-white sm:text-2xl">New Fluid System Project</h1>
           <p className="text-sm text-slate-400">
-            Flow parameters and process conditions are determined by AI for accuracy
+            AI determines process parameters, confidence levels, and lifespan from your inputs
           </p>
         </div>
       </div>
@@ -238,14 +262,14 @@ export default function NewProjectPage() {
               <p className="text-lg font-semibold text-white">Generating System Design</p>
               <p className="mt-1 text-sm text-slate-400">{statusMsg}</p>
             </div>
-            <p className="text-xs text-slate-500">Typically 30–60 seconds</p>
+            <p className="text-xs text-slate-500">Typically 30–90 seconds</p>
           </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* ── Section 1: Malaysia Location (FIRST & prominent) ── */}
+        {/* ── Section 1: Malaysia Location ── */}
         <section className="rounded-2xl border border-blue-600/30 bg-blue-600/5 p-6">
           <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-blue-400">
             <MapPin className="h-4 w-4" />
@@ -262,9 +286,7 @@ export default function NewProjectPage() {
                 >
                   <option value="">— Select state —</option>
                   {MALAYSIA_STATES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </SelectWrapper>
@@ -280,25 +302,21 @@ export default function NewProjectPage() {
                   className={selectCls}
                 >
                   {SITE_ENVIRONMENTS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </SelectWrapper>
             </div>
           </div>
           <p className="mt-3 text-xs text-blue-400/70">
-            Suppliers and pricing will be selected based on your state and proximity to major industrial hubs.
+            Suppliers, pricing, and transportation costs are calculated based on your state.
           </p>
         </section>
 
         {/* ── Section 2: Project Details ── */}
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-              1
-            </span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">1</span>
             Project Details
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -319,13 +337,11 @@ export default function NewProjectPage() {
               <SelectWrapper>
                 <select
                   value={form.industry}
-                  onChange={(e) => set('industry', e.target.value)}
+                  onChange={(e) => handleIndustryChange(e.target.value)}
                   className={selectCls}
                 >
                   {INDUSTRIES.map((i) => (
-                    <option key={i} value={i}>
-                      {i}
-                    </option>
+                    <option key={i} value={i}>{i}</option>
                   ))}
                 </select>
               </SelectWrapper>
@@ -348,13 +364,11 @@ export default function NewProjectPage() {
         {/* ── Section 3: Fluid Type ── */}
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-              2
-            </span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">2</span>
             Fluid Type
           </h2>
           <p className="mb-5 text-xs text-slate-500">
-            Flow rate, pressure, and temperature will be determined by AI based on your application.
+            Showing fluids relevant to <span className="text-slate-300">{form.industry}</span>. Flow rate, pressure, and temperature are determined by AI.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -365,10 +379,8 @@ export default function NewProjectPage() {
                   onChange={(e) => set('fluidType', e.target.value)}
                   className={selectCls}
                 >
-                  {FLUID_TYPES.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
+                  {availableFluids.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
                 </select>
               </SelectWrapper>
@@ -390,21 +402,87 @@ export default function NewProjectPage() {
           </div>
         </section>
 
-        {/* ── Section 4: Budget & Requirements ── */}
+        {/* ── Section 4: System Scale ── */}
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">3</span>
+            System Scale
+          </h2>
+          <p className="mb-5 text-xs text-slate-500">
+            Provide one or both scale inputs. This ensures component quantities and sizes match your actual production requirements.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Flow Rate */}
+            <div>
+              <Label>Flow Rate</Label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={form.scaleFlowRateValue ?? ''}
+                  onChange={(e) => set('scaleFlowRateValue', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="e.g. 50"
+                  className={`${inputCls} flex-1`}
+                />
+                <SelectWrapper>
+                  <select
+                    value={form.scaleFlowRateUnit}
+                    onChange={(e) => set('scaleFlowRateUnit', e.target.value as ProjectInput['scaleFlowRateUnit'])}
+                    className="appearance-none rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-3 text-sm text-white outline-none focus:border-blue-500 pr-7"
+                  >
+                    {FLOW_RATE_UNITS.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </SelectWrapper>
+              </div>
+            </div>
+
+            {/* Volume per Month */}
+            <div>
+              <Label>Volume per Month</Label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={form.scaleVolumeMonthlyValue ?? ''}
+                  onChange={(e) => set('scaleVolumeMonthlyValue', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="e.g. 36000"
+                  className={`${inputCls} flex-1`}
+                />
+                <SelectWrapper>
+                  <select
+                    value={form.scaleVolumeMonthlyUnit}
+                    onChange={(e) => set('scaleVolumeMonthlyUnit', e.target.value as ProjectInput['scaleVolumeMonthlyUnit'])}
+                    className="appearance-none rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-3 text-sm text-white outline-none focus:border-blue-500 pr-8"
+                  >
+                    {VOLUME_MONTHLY_UNITS.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </SelectWrapper>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-800/50 p-3">
+            <Scale className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+            <p className="text-xs text-slate-500">
+              If left blank, the AI estimates scale from your application description. Providing values improves component sizing accuracy.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Section 5: Budget & Requirements ── */}
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-              3
-            </span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">4</span>
             Budget & Special Requirements
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label required>Budget (MYR)</Label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                  RM
-                </span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">RM</span>
                 <input
                   type="number"
                   value={form.budget}
@@ -436,20 +514,14 @@ export default function NewProjectPage() {
           className="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/25 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {generating ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Generating Design…
-            </>
+            <><Loader2 className="h-5 w-5 animate-spin" />Generating Design…</>
           ) : (
-            <>
-              <Zap className="h-5 w-5" />
-              Generate System Design
-            </>
+            <><Zap className="h-5 w-5" />Generate System Design</>
           )}
         </button>
 
         <p className="text-center text-xs text-slate-500">
-          All prices in Malaysian Ringgit (MYR). Suppliers selected by proximity to your state.
+          All prices in Malaysian Ringgit (MYR) including transportation. Suppliers selected by proximity to your state.
         </p>
       </form>
     </div>

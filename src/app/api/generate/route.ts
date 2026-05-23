@@ -150,6 +150,17 @@ function stateLabel(val: string): string {
   return map[val] ?? val.replace(/_/g, ' ');
 }
 
+function buildScaleText(input: ProjectInput): string {
+  const parts: string[] = [];
+  if (input.scaleFlowRateValue) {
+    parts.push(`Flow rate: ${input.scaleFlowRateValue} ${input.scaleFlowRateUnit}`);
+  }
+  if (input.scaleVolumeMonthlyValue) {
+    parts.push(`Volume per month: ${input.scaleVolumeMonthlyValue} ${input.scaleVolumeMonthlyUnit}`);
+  }
+  return parts.length > 0 ? parts.join(' | ') : 'Not specified — estimate from application description';
+}
+
 function buildPrompt(input: ProjectInput): string {
   const fluidName =
     input.fluidType === 'chemical' || input.fluidType === 'other'
@@ -158,6 +169,7 @@ function buildPrompt(input: ProjectInput): string {
 
   const state = stateLabel(input.malaysiaState);
   const env = input.siteEnvironment.replace(/_/g, ' ');
+  const scale = buildScaleText(input);
 
   return `Design a complete industrial fluid system for a project in ${state}, Malaysia.
 
@@ -166,22 +178,27 @@ INDUSTRY: ${input.industry}
 APPLICATION: ${input.application}
 FLUID: ${fluidName}
 SITE: ${env}
+SYSTEM SCALE: ${scale}
 BUDGET: RM ${input.budget.toLocaleString()} MYR
 SPECIAL REQUIREMENTS: ${input.specialRequirements || 'None'}
 LOCATION: ${state}, Malaysia — select suppliers closest to this state
 
 INSTRUCTIONS:
-1. Determine all process parameters (flow rate, pressure, temperature, pipe size) from the application description. Explain your engineering basis.
-2. All costs in MYR. Use Malaysian market prices including SST and local logistics.
-3. For suppliers: pick brands with offices or distributors nearest to ${state}. If in East Malaysia, account for extra logistics cost.
+1. Determine all process parameters from the application description and scale inputs. If scale is provided, size ALL components (pump kW, pipe diameter, vessel volume, etc.) to match exactly. Explain your engineering basis.
+2. All costs in MYR. Use Malaysian market prices including SST.
+3. For suppliers: pick brands with offices or distributors nearest to ${state}. If in East Malaysia, account for extra logistics cost (10–15% premium). Calculate transportation cost separately as a line item based on shipment from supplier city to ${state}.
 4. Apply relevant Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS as applicable).
-5. For EVERY component, provide exactly 2 alternatives from DIFFERENT Malaysian suppliers with realistic MYR costs. Alternatives should offer genuine trade-offs (e.g. cost saving, faster local availability, equivalent spec from a competing brand).
+5. For EVERY component, provide exactly 2 alternatives from DIFFERENT Malaysian suppliers with realistic MYR costs and confidence levels.
+6. For EVERY component assign a confidence_level (0–100) representing how confident you are this is the optimal choice for this specific application, fluid, and environment. Be honest — flag lower confidence when the application is unusual or specs are ambiguous.
+7. For EVERY component assign lifespan_years (expected service life before replacement/major overhaul under normal operating conditions in Malaysian climate) and lifespan_notes explaining key factors.
+8. Assign overall_confidence (0–100) for the entire recommendation.
 
 Return ONLY this JSON (fill every field with real engineering and commercial data):
 {
-  "summary": "2-3 sentence system overview",
+  "summary": "2-3 sentence system overview including scale and key design decisions",
   "system_type": "system classification",
-  "design_basis": "key engineering considerations, Malaysian code references",
+  "design_basis": "key engineering considerations, scale basis, Malaysian code references",
+  "overall_confidence": 85,
   "process_parameters": {
     "design_flow_rate": "e.g. 45 m³/hr",
     "operating_pressure": "e.g. 8 bar(g)",
@@ -189,7 +206,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
     "operating_temperature": "e.g. 65°C",
     "design_temperature": "e.g. 85°C",
     "fluid_velocity": "e.g. 2.5 m/s",
-    "basis": "2-3 sentences explaining how these values were determined from the application"
+    "basis": "2-3 sentences explaining how values were determined from application and scale inputs"
   },
   "components": [
     {
@@ -197,13 +214,16 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
       "name": "descriptive component name",
       "category": "pump|valve|filter|vessel|fitting|electrical|safety|other",
       "quantity": 1,
-      "specification": "full technical spec: size, rating, material, performance",
+      "specification": "full technical spec: size, rating, material, performance — sized to match system scale",
       "material": "material of construction and reason",
       "supplier": "real Malaysian supplier name and city",
       "model": "real model/series example",
       "unit_cost_myr": 0,
       "total_cost_myr": 0,
       "notes": "selection rationale, Malaysian compliance note if applicable",
+      "confidence_level": 85,
+      "lifespan_years": 15,
+      "lifespan_notes": "Expected lifespan under normal conditions; factors affecting longevity for this application",
       "alternatives": [
         {
           "name": "alternative component name",
@@ -211,7 +231,8 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
           "model": "alternative model",
           "reason": "why this is a viable alternative (cost saving, faster delivery, local stock, etc.)",
           "unit_cost_myr": 0,
-          "total_cost_myr": 0
+          "total_cost_myr": 0,
+          "confidence_level": 78
         },
         {
           "name": "second alternative component name",
@@ -219,7 +240,8 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
           "model": "second alternative model",
           "reason": "why this is a viable alternative",
           "unit_cost_myr": 0,
-          "total_cost_myr": 0
+          "total_cost_myr": 0,
+          "confidence_level": 72
         }
       ]
     }
@@ -231,7 +253,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
     "connection_type": "flanged|threaded|welded",
     "insulation_required": false,
     "insulation_type": null,
-    "design_notes": "piping notes including corrosion allowance for Malaysian climate"
+    "design_notes": "piping notes including corrosion allowance for Malaysian climate and sizing basis"
   },
   "instrumentation": [
     {
@@ -284,12 +306,13 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
   ],
   "cost_estimate": {
     "equipment_cost_myr": 0,
+    "transportation_cost_myr": 0,
     "installation_cost_myr": 0,
     "engineering_cost_myr": 0,
     "commissioning_cost_myr": 0,
     "total_cost_myr": 0,
     "within_budget": true,
-    "budget_notes": "cost summary vs RM budget, note if East Malaysia logistics premium applied"
+    "budget_notes": "cost summary vs RM budget; transportation calculated from supplier cities to ${state}; note any East Malaysia logistics premium"
   },
   "lead_time_weeks": 8,
   "recommended_vendors": [
@@ -300,7 +323,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
       "website_hint": "vendor.com.my or vendor.com"
     }
   ],
-  "engineering_notes": "additional design recommendations, commissioning notes, Malaysian-specific considerations"
+  "engineering_notes": "additional design recommendations, commissioning notes, Malaysian-specific considerations, confidence caveats"
 }`;
 }
 

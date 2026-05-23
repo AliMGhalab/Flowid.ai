@@ -56,6 +56,28 @@ export interface SystemComponent {
   confidence_level?: number;      // 0–100: AI confidence this is the right choice
   lifespan_years?: number;        // Expected years before replacement/major overhaul
   lifespan_notes?: string;        // Conditions affecting lifespan
+  price_basis?: string;           // Where the price comes from (catalog, region, currency basis, date)
+}
+
+export interface EngineeringCalculations {
+  // Pump hydraulics
+  npsh_available_m?: number;          // Net Positive Suction Head Available (m)
+  npsh_required_m?: number;           // Manufacturer's NPSHr at duty point (m)
+  npsh_margin_m?: number;             // NPSHa - NPSHr; should be > 0.6 m
+  total_dynamic_head_m?: number;      // TDH at duty point (m)
+  static_head_m?: number;             // Elevation head (m)
+  friction_head_m?: number;           // Pipe + fittings losses (m)
+  pump_power_kw?: number;             // Calculated shaft power (kW)
+  motor_size_kw?: number;             // Selected motor size (kW)
+  // Piping hydraulics
+  pipe_velocity_m_s?: number;         // Fluid velocity in main line (m/s)
+  reynolds_number?: number;           // Re — turbulent if > 4000
+  flow_regime?: 'laminar' | 'transitional' | 'turbulent';
+  friction_factor?: number;           // Darcy friction factor (dimensionless)
+  pressure_drop_bar_per_100m?: number; // Pressure drop per 100 m of pipe (bar)
+  // Process
+  heat_load_kw?: number;              // For cooling/heating systems
+  notes?: string;                     // Engineering assumptions, formulas used, references
 }
 
 export interface Instrument {
@@ -149,6 +171,7 @@ export interface FluidSystemRecommendation {
   design_basis: string;
   overall_confidence?: number;    // 0–100: overall recommendation confidence
   process_parameters: ProcessParameters;
+  engineering_calculations?: EngineeringCalculations;
   components: SystemComponent[];
   piping: PipingSpec;
   instrumentation: Instrument[];

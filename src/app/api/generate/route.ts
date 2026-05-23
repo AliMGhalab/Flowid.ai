@@ -307,6 +307,35 @@ SAFETY & ANCILLARY
 
 SELF-CHECK BEFORE FINALISING: Review your component list against this system's P&ID mentally. Ask: "Can this system actually start up, run continuously, be isolated for maintenance, be drained, be vented, be instrumented, be controlled, be protected from overpressure, and be safely shut down — using only the components I have listed?" If any of those answers is no, add the missing items. The number of components is dictated entirely by the engineering requirements of the system at the given scale and budget. Do NOT artificially reduce the count.
 
+HAZOP REQUIREMENTS — produce a thorough hazard analysis, not a token list:
+Apply the standard HAZOP guidewords to the system's main process line and key nodes (pump suction, pump discharge, control valve, vessel, heat exchanger if present). For EACH applicable guideword that could realistically occur in this system, generate a separate risk entry:
+  • NO FLOW          — blockage, valve closed, pump trip
+  • MORE FLOW        — control valve fails open, bypass open
+  • LESS FLOW        — partial blockage, fouled strainer
+  • REVERSE FLOW     — check valve failure, pressure reversal
+  • MORE PRESSURE    — blocked discharge, thermal expansion, PSV failure
+  • LESS PRESSURE    — suction starvation, pump cavitation
+  • MORE TEMPERATURE — loss of cooling, runaway reaction (if chemical)
+  • LESS TEMPERATURE — loss of heating, freezing in cold months
+  • CONTAMINATION    — wrong fluid, cross-connection, corrosion products
+  • LEAK / RELEASE   — flange leak, seal failure, pipe rupture
+  • LOSS OF UTILITY  — power loss, instrument air loss, cooling water loss
+  • MAINTENANCE      — lockout/tagout failure, equipment isolation
+  • CORROSION / EROSION — material incompatibility, high-velocity wear
+  • ELECTRICAL FAULT — short circuit, VFD failure, earth fault (BOMBA-relevant)
+TARGET: aim for 20 or more risk entries covering the above guidewords across system nodes. Each entry must have a distinct hazard, cause, and consequence — no duplicates. Reference DOSH FMA 1967, BOMBA UBBL fire safety, SIRIM electrical certification, or DOE environmental code in mitigations where applicable.
+
+ENGINEERING CALCULATIONS — fill the engineering_calculations block with REAL numbers derived from the process parameters you set:
+  • NPSHa from: atmospheric pressure + suction static head − vapour pressure − friction losses
+  • TDH = static head + friction head + velocity head
+  • Pump shaft power (kW) = (flow_m3_per_s × head_m × density_kg_per_m3 × 9.81) / (pump_efficiency × 1000); typical η = 0.65–0.75
+  • Motor size = next standard size above shaft power (IEC: 5.5, 7.5, 11, 15, 18.5, 22, 30, 37, 45, 55, 75 kW...)
+  • Reynolds = (density × velocity × diameter_m) / viscosity_Pa_s
+  • Flow regime: laminar < 2300, transitional 2300–4000, turbulent > 4000
+  • Friction factor: use Colebrook or Swamee-Jain for turbulent flow
+  • Pressure drop: ΔP/L = f × (ρ × v²) / (2 × D) — convert to bar/100m
+These calculations PROVE the design is grounded in math, not guesswork. Take them seriously. Use water properties at the operating temperature for water systems; adjust for other fluids.
+
 Return ONLY this JSON (fill every field with real engineering and commercial data). Keep text fields concise — 1–2 sentences maximum for notes, procedures, and descriptions. Use the token budget for complete component coverage, not verbose prose.
 {
   "summary": "2-3 sentence system overview including scale and key design decisions",
@@ -321,6 +350,23 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
     "design_temperature": "e.g. 85°C",
     "fluid_velocity": "e.g. 2.5 m/s",
     "basis": "2-3 sentences explaining how values were determined from application and scale inputs"
+  },
+  "engineering_calculations": {
+    "npsh_available_m": 7.2,
+    "npsh_required_m": 4.5,
+    "npsh_margin_m": 2.7,
+    "total_dynamic_head_m": 35,
+    "static_head_m": 8,
+    "friction_head_m": 27,
+    "pump_power_kw": 6.8,
+    "motor_size_kw": 7.5,
+    "pipe_velocity_m_s": 2.2,
+    "reynolds_number": 195000,
+    "flow_regime": "turbulent",
+    "friction_factor": 0.019,
+    "pressure_drop_bar_per_100m": 0.42,
+    "heat_load_kw": 175,
+    "notes": "Calculations per Darcy-Weisbach for water at 35°C, density 994 kg/m³, viscosity 0.72 cP. NPSH margin > 0.6 m per API 610. Motor selected one size above shaft power per IEC 60034. Heat load only for cooling/heating systems — set 0 or omit if not applicable."
   },
   "components": [
     {
@@ -338,6 +384,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
       "confidence_level": 85,
       "lifespan_years": 15,
       "lifespan_notes": "Expected lifespan under normal conditions; factors affecting longevity for this application",
+      "price_basis": "e.g. 'Based on Grundfos Malaysia May 2026 list price for Selangor delivery; bulk discount possible above 5 units'",
       "alternatives": [
         {
           "name": "alternative component name",
@@ -388,13 +435,13 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
       {
         "id": "R-001",
         "category": "mechanical|chemical|thermal|electrical|operational|environmental",
-        "hazard": "hazard description",
+        "hazard": "hazard description (state the HAZOP guideword + deviation, e.g. 'NO FLOW in main discharge line')",
         "cause": "potential cause",
         "consequence": "potential consequence",
         "likelihood": "low|medium|high",
         "severity": "low|medium|high|critical",
         "risk_level": "low|medium|high|critical",
-        "safeguard": "existing protection",
+        "safeguard": "existing protection (instrumentation, PSV, interlock, procedure)",
         "mitigation": "recommended action (reference DOSH/BOMBA/SIRIM where applicable)"
       }
     ]
@@ -541,7 +588,7 @@ function buildModelRoster(): ModelConfig[] {
 
   // Cerebras Qwen 235B — fast, large, returns clean JSON
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 16000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 24000 });
   }
 
   return roster;

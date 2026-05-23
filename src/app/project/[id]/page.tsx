@@ -210,6 +210,93 @@ function OverviewTab({ project }: { project: Project }) {
         </SectionCard>
       )}
 
+      {rec.engineering_calculations && Object.keys(rec.engineering_calculations).length > 0 && (
+        <SectionCard title="Engineering Calculations">
+          <p className="mb-4 text-xs text-slate-400 leading-relaxed">
+            Hydraulic and process calculations derived from the design parameters. Methods: Darcy-Weisbach
+            for pipe friction, Colebrook for friction factor, NPSH per API 610.
+          </p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+            {[
+              rec.engineering_calculations.npsh_available_m !== undefined && {
+                label: 'NPSH Available',
+                value: `${rec.engineering_calculations.npsh_available_m} m`,
+              },
+              rec.engineering_calculations.npsh_required_m !== undefined && {
+                label: 'NPSH Required',
+                value: `${rec.engineering_calculations.npsh_required_m} m`,
+              },
+              rec.engineering_calculations.npsh_margin_m !== undefined && {
+                label: 'NPSH Margin',
+                value: `${rec.engineering_calculations.npsh_margin_m} m${
+                  rec.engineering_calculations.npsh_margin_m > 0.6 ? ' ✓' : ' ⚠'
+                }`,
+              },
+              rec.engineering_calculations.total_dynamic_head_m !== undefined && {
+                label: 'Total Dynamic Head',
+                value: `${rec.engineering_calculations.total_dynamic_head_m} m`,
+              },
+              rec.engineering_calculations.static_head_m !== undefined && {
+                label: 'Static Head',
+                value: `${rec.engineering_calculations.static_head_m} m`,
+              },
+              rec.engineering_calculations.friction_head_m !== undefined && {
+                label: 'Friction Head',
+                value: `${rec.engineering_calculations.friction_head_m} m`,
+              },
+              rec.engineering_calculations.pump_power_kw !== undefined && {
+                label: 'Pump Shaft Power',
+                value: `${rec.engineering_calculations.pump_power_kw} kW`,
+              },
+              rec.engineering_calculations.motor_size_kw !== undefined && {
+                label: 'Motor Size (IEC)',
+                value: `${rec.engineering_calculations.motor_size_kw} kW`,
+              },
+              rec.engineering_calculations.pipe_velocity_m_s !== undefined && {
+                label: 'Pipe Velocity',
+                value: `${rec.engineering_calculations.pipe_velocity_m_s} m/s`,
+              },
+              rec.engineering_calculations.reynolds_number !== undefined && {
+                label: 'Reynolds Number',
+                value: rec.engineering_calculations.reynolds_number.toLocaleString('en-US'),
+              },
+              rec.engineering_calculations.flow_regime && {
+                label: 'Flow Regime',
+                value:
+                  rec.engineering_calculations.flow_regime.charAt(0).toUpperCase() +
+                  rec.engineering_calculations.flow_regime.slice(1),
+              },
+              rec.engineering_calculations.friction_factor !== undefined && {
+                label: 'Friction Factor (Darcy)',
+                value: String(rec.engineering_calculations.friction_factor),
+              },
+              rec.engineering_calculations.pressure_drop_bar_per_100m !== undefined && {
+                label: 'ΔP per 100 m',
+                value: `${rec.engineering_calculations.pressure_drop_bar_per_100m} bar`,
+              },
+              rec.engineering_calculations.heat_load_kw !== undefined &&
+                rec.engineering_calculations.heat_load_kw > 0 && {
+                  label: 'Heat Load',
+                  value: `${rec.engineering_calculations.heat_load_kw} kW`,
+                },
+            ]
+              .filter((x): x is { label: string; value: string } => Boolean(x))
+              .map((item, idx) => (
+                <div key={idx} className="border-l-2 border-slate-700 pl-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">{item.label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-white">{item.value}</p>
+                </div>
+              ))}
+          </div>
+          {rec.engineering_calculations.notes && (
+            <p className="mt-4 text-xs text-slate-400 leading-relaxed">
+              <span className="font-medium text-slate-300">Calculation basis: </span>
+              {rec.engineering_calculations.notes}
+            </p>
+          )}
+        </SectionCard>
+      )}
+
       {rec.engineering_notes && (
         <SectionCard title="Engineering Notes">
           <p className="text-slate-300 leading-relaxed">{rec.engineering_notes}</p>
@@ -390,6 +477,16 @@ function ComponentsTab({ components }: { components: SystemComponent[] }) {
                   )}
                 </div>
               </div>
+
+              {/* Price basis (inside expanded view) */}
+              {isExpanded && c.price_basis && (
+                <div className="border-t border-slate-800 bg-slate-950/40 px-4 py-2">
+                  <p className="text-xs text-slate-400">
+                    <span className="font-medium text-slate-300">Price basis: </span>
+                    <span className="italic">{c.price_basis}</span>
+                  </p>
+                </div>
+              )}
 
               {/* Alternatives panel */}
               {hasAlts && isExpanded && (

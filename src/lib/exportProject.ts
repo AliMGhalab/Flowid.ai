@@ -258,26 +258,124 @@ export async function exportToPDF(project: Project): Promise<void> {
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   }
 
+  // ── Engineering Calculations ─────────────────────────────────────────────
+  const ec = rec.engineering_calculations;
+  if (ec && Object.keys(ec).length > 0) {
+    addPage();
+    sectionHeader('2. Engineering Calculations');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...SLATE_600);
+    const introLine = doc.splitTextToSize(
+      'Hydraulic and process calculations derived from the design parameters above. Methods: Darcy-Weisbach for pipe friction, Colebrook/Swamee-Jain for friction factor, NPSH per API 610.',
+      CONTENT_W,
+    );
+    doc.text(introLine, MARGIN, y);
+    y += introLine.length * 4 + 4;
+
+    // Pump hydraulics table
+    const pumpRows: Array<[string, string]> = [];
+    if (ec.npsh_available_m !== undefined) pumpRows.push(['NPSH Available (NPSHa)', `${ec.npsh_available_m} m`]);
+    if (ec.npsh_required_m !== undefined) pumpRows.push(['NPSH Required (NPSHr)', `${ec.npsh_required_m} m`]);
+    if (ec.npsh_margin_m !== undefined) {
+      const ok = ec.npsh_margin_m > 0.6;
+      pumpRows.push(['NPSH Margin (NPSHa − NPSHr)', `${ec.npsh_margin_m} m ${ok ? '✓ adequate' : '✗ marginal — verify'}`]);
+    }
+    if (ec.static_head_m !== undefined) pumpRows.push(['Static Head', `${ec.static_head_m} m`]);
+    if (ec.friction_head_m !== undefined) pumpRows.push(['Friction Head', `${ec.friction_head_m} m`]);
+    if (ec.total_dynamic_head_m !== undefined) pumpRows.push(['Total Dynamic Head (TDH)', `${ec.total_dynamic_head_m} m`]);
+    if (ec.pump_power_kw !== undefined) pumpRows.push(['Pump Shaft Power (calculated)', `${ec.pump_power_kw} kW`]);
+    if (ec.motor_size_kw !== undefined) pumpRows.push(['Motor Size (IEC standard)', `${ec.motor_size_kw} kW`]);
+
+    if (pumpRows.length > 0) {
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...SLATE_900);
+      checkY(8);
+      doc.text('2.1 Pump Hydraulics', MARGIN, y);
+      y += 4;
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        head: [['Parameter', 'Value']],
+        body: pumpRows,
+        theme: 'striped',
+        headStyles: { fillColor: BRAND_BLUE, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: SLATE_900 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+        alternateRowStyles: { fillColor: [241, 245, 249] },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    }
+
+    // Piping hydraulics table
+    const pipingRows: Array<[string, string]> = [];
+    if (ec.pipe_velocity_m_s !== undefined) pipingRows.push(['Fluid Velocity', `${ec.pipe_velocity_m_s} m/s`]);
+    if (ec.reynolds_number !== undefined) pipingRows.push(['Reynolds Number (Re)', ec.reynolds_number.toLocaleString('en-US')]);
+    if (ec.flow_regime) pipingRows.push(['Flow Regime', cap(ec.flow_regime)]);
+    if (ec.friction_factor !== undefined) pipingRows.push(['Darcy Friction Factor (f)', String(ec.friction_factor)]);
+    if (ec.pressure_drop_bar_per_100m !== undefined) pipingRows.push(['Pressure Drop per 100 m', `${ec.pressure_drop_bar_per_100m} bar`]);
+    if (ec.heat_load_kw !== undefined && ec.heat_load_kw > 0) pipingRows.push(['Process Heat Load', `${ec.heat_load_kw} kW`]);
+
+    if (pipingRows.length > 0) {
+      checkY(20);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...SLATE_900);
+      doc.text('2.2 Piping Hydraulics & Process', MARGIN, y);
+      y += 4;
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        head: [['Parameter', 'Value']],
+        body: pipingRows,
+        theme: 'striped',
+        headStyles: { fillColor: BRAND_BLUE, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: SLATE_900 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+        alternateRowStyles: { fillColor: [241, 245, 249] },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+    }
+
+    if (ec.notes) {
+      checkY(18);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(...SLATE_600);
+      const notesLines = doc.splitTextToSize('Calculation basis: ' + ec.notes, CONTENT_W);
+      doc.text(notesLines, MARGIN, y);
+      y += notesLines.length * 4 + 4;
+    }
+  }
+
   // ── Bill of Materials ─────────────────────────────────────────────────────
 
   addPage();
-  sectionHeader('2. Bill of Materials (BOM)');
+  sectionHeader(ec ? '3. Bill of Materials (BOM)' : '2. Bill of Materials (BOM)');
 
-  const bomBody = (rec.components ?? []).map((c) => [
-    c.id,
-    c.name,
-    cap(c.category),
-    String(c.quantity),
-    c.specification,
-    c.material,
-    c.supplier,
-    c.model,
-    fmt(c.unit_cost_myr ?? c.unit_cost_usd),
-    fmt(c.total_cost_myr ?? c.total_cost_usd),
-    c.confidence_level !== undefined ? `${c.confidence_level}%` : '—',
-    c.lifespan_years ? `${c.lifespan_years} yr` : '—',
-    c.notes ?? '—',
-  ]);
+  const bomBody = (rec.components ?? []).map((c) => {
+    // Combine notes + price_basis (italic suffix) so we don't add a column
+    const combinedNotes = c.price_basis
+      ? `${c.notes ?? ''}\n[Price basis: ${c.price_basis}]`.trim()
+      : (c.notes ?? '—');
+    return [
+      c.id,
+      c.name,
+      cap(c.category),
+      String(c.quantity),
+      c.specification,
+      c.material,
+      c.supplier,
+      c.model,
+      fmt(c.unit_cost_myr ?? c.unit_cost_usd),
+      fmt(c.total_cost_myr ?? c.total_cost_usd),
+      c.confidence_level !== undefined ? `${c.confidence_level}%` : '—',
+      c.lifespan_years ? `${c.lifespan_years} yr` : '—',
+      combinedNotes,
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
@@ -339,7 +437,7 @@ export async function exportToPDF(project: Project): Promise<void> {
 
   if (altsData.length > 0) {
     checkY(20);
-    sectionHeader('3. Component Alternatives');
+    sectionHeader('4. Component Alternatives');
     autoTable(doc, {
       startY: y,
       margin: { left: MARGIN, right: MARGIN },
@@ -367,7 +465,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   // ── Piping & Instrumentation ───────────────────────────────────────────────
 
   addPage();
-  sectionHeader('4. Piping Specification');
+  sectionHeader('5. Piping Specification');
 
   if (rec.piping) {
     const p = rec.piping;
@@ -397,7 +495,7 @@ export async function exportToPDF(project: Project): Promise<void> {
 
   if ((rec.instrumentation ?? []).length > 0) {
     checkY(20);
-    sectionHeader('5. Instrumentation List');
+    sectionHeader('6. Instrumentation List');
     const instBody = rec.instrumentation.map((i) => [
       i.tag,
       i.description,
@@ -435,7 +533,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   // ── Risk Assessment ───────────────────────────────────────────────────────
 
   addPage();
-  sectionHeader('6. Risk Assessment (HAZOP)');
+  sectionHeader('7. Risk Assessment (HAZOP)');
 
   const ra = rec.risk_assessment;
   if (ra) {
@@ -503,7 +601,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   // ── Maintenance Schedule ───────────────────────────────────────────────────
 
   addPage();
-  sectionHeader('7. Maintenance Schedule');
+  sectionHeader('8. Maintenance Schedule');
 
   const order = ['daily', 'weekly', 'monthly', 'quarterly', 'biannual', 'annual'];
   const sorted = [...(rec.maintenance_schedule ?? [])].sort(
@@ -547,7 +645,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   // ── Cost Estimate ─────────────────────────────────────────────────────────
 
   addPage();
-  sectionHeader('8. Cost Estimate Summary');
+  sectionHeader('9. Cost Estimate Summary');
 
   if (est) {
     const equip = est.equipment_cost_myr ?? est.equipment_cost_usd ?? 0;
@@ -624,7 +722,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   // ── Vendors & Compliance ───────────────────────────────────────────────────
 
   addPage();
-  sectionHeader('9. Recommended Vendors');
+  sectionHeader('10. Recommended Vendors');
 
   if ((rec.recommended_vendors ?? []).length > 0) {
     autoTable(doc, {
@@ -647,7 +745,7 @@ export async function exportToPDF(project: Project): Promise<void> {
   }
 
   checkY(20);
-  sectionHeader('10. Compliance Standards', [5, 150, 105]);
+  sectionHeader('11. Compliance Standards', [5, 150, 105]);
 
   if ((rec.compliance_standards ?? []).length > 0) {
     autoTable(doc, {
@@ -668,7 +766,7 @@ export async function exportToPDF(project: Project): Promise<void> {
 
   if (rec.engineering_notes) {
     checkY(20);
-    sectionHeader('11. Engineering Notes');
+    sectionHeader('12. Engineering Notes');
     const enLines = doc.splitTextToSize(rec.engineering_notes, CONTENT_W);
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');

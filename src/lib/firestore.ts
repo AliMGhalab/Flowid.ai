@@ -6,7 +6,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -48,11 +47,10 @@ export async function getProject(projectId: string): Promise<Project | null> {
 export async function getUserProjects(userId: string): Promise<Project[]> {
   const q = query(
     collection(db, 'projects'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => {
+  const projects = snapshot.docs.map((d) => {
     const data = d.data();
     return {
       id: d.id,
@@ -61,6 +59,8 @@ export async function getUserProjects(userId: string): Promise<Project[]> {
       updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
     } as Project;
   });
+  // Sort by createdAt descending on the client (avoids composite index requirement)
+  return projects.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function deleteProject(projectId: string): Promise<void> {

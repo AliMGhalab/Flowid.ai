@@ -531,11 +531,15 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Gemini first — biggest free quota, handles large prompts
+  // Gemini 2.0 Flash — primary
   if (process.env.GEMINI_API_KEY) {
     roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
+    // Gemini 1.5 Flash — separate RPM bucket, used if 2.0 is rate-limited
+    roster.push({ provider: 'gemini', model: 'gemini-1.5-flash', max_tokens: 8000 });
+    // Gemini 1.5 Flash 8B — even smaller, often available when others aren't
+    roster.push({ provider: 'gemini', model: 'gemini-1.5-flash-8b', max_tokens: 8000 });
   }
-  // Chutes second — fallback when Gemini rate-limits
+  // Chutes — fallback when all Gemini models are rate-limited
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
   }

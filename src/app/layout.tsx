@@ -6,10 +6,21 @@ import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Flowid.ai — AI Fluid System Engineering',
+  title: 'Flowid.ai — AI Fluid System Engineering for Malaysia',
   description:
-    'AI-powered industrial fluid system design. Input your process parameters and receive complete component specifications, risk assessments, and maintenance schedules.',
-  keywords: ['fluid system', 'AI engineering', 'process design', 'industrial automation'],
+    'Generate a complete industrial fluid system specification in minutes — full BOM with Malaysian supplier pricing in MYR, HAZOP risk register, DOSH compliance, and PDF engineering report. Built for Malaysian plant engineers and EPC contractors.',
+  keywords: [
+    'fluid system engineering Malaysia',
+    'industrial BOM Malaysia',
+    'process engineering software Malaysia',
+    'DOSH compliance',
+    'PETRONAS PTS',
+    'palm oil fluid system',
+    'piping design Malaysia',
+    'AI engineering tool',
+    'MYR equipment pricing',
+    'plant engineering Malaysia',
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

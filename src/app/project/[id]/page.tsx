@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { getProject } from '@/lib/firestore';
 import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule, LivePriceResult, ComponentAlternative } from '@/types';
+import { getFluidLabel } from '@/lib/fluidLabels';
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -167,7 +168,7 @@ function OverviewTab({ project }: { project: Project }) {
       <SectionCard title="Project Parameters">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { label: 'Fluid', value: (project.input.fluidType === 'chemical' || project.input.fluidType === 'other') ? project.input.customFluidType : project.input.fluidType?.replace(/_/g, ' ') },
+            { label: 'Fluid', value: getFluidLabel(project.input.fluidType, project.input.customFluidType) },
             { label: 'Industry', value: project.input.industry },
             { label: 'Location', value: project.input.malaysiaState?.replace(/_/g, ' ') ?? '—' },
             { label: 'Site Environment', value: project.input.siteEnvironment?.replace(/_/g, ' ') ?? '—' },
@@ -863,7 +864,7 @@ export default function ProjectPage() {
             <div>
               <h1 className="text-xl font-bold text-white sm:text-2xl">{project.projectName}</h1>
               <p className="mt-0.5 text-sm text-slate-400">
-                {project.input.industry} · {(project.input.fluidType === 'chemical' || project.input.fluidType === 'other') ? project.input.customFluidType : project.input.fluidType?.replace(/_/g, ' ')}
+                {project.input.industry} · {getFluidLabel(project.input.fluidType, project.input.customFluidType)}
                 {project.input.malaysiaState && ` · ${project.input.malaysiaState.replace(/_/g, ' ')}, Malaysia`}
               </p>
               <p className="mt-1 text-xs text-slate-500">{rec.system_type}</p>

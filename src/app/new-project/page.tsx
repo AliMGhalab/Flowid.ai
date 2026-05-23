@@ -376,7 +376,7 @@ export default function NewProjectPage() {
         <div>
           <h1 className="text-xl font-bold text-white sm:text-2xl">New Fluid System Project</h1>
           <p className="text-sm text-slate-400">
-            AI determines process parameters, confidence levels, and lifespan from your inputs
+            Describe your system — AI determines all process parameters, sizes every component to your scale, selects Malaysian suppliers, and checks DOSH / BOMBA compliance.
           </p>
         </div>
       </div>
@@ -395,7 +395,7 @@ export default function NewProjectPage() {
               <p className="text-lg font-semibold text-white">Generating System Design</p>
               <p className="mt-1 text-sm text-slate-400">{statusMsg}</p>
             </div>
-            <p className="text-xs text-slate-500">Typically 30–90 seconds</p>
+            <p className="text-xs text-slate-500">Typically 20–60 seconds</p>
           </div>
         </div>
       )}
@@ -637,7 +637,7 @@ export default function NewProjectPage() {
                 value={form.specialRequirements}
                 onChange={(e) => set('specialRequirements', e.target.value)}
                 rows={3}
-                placeholder="e.g. DOSH-approved equipment, Bomba-compliant fire suppression, SIRIM-certified, corrosion resistant for coastal environment, halal-certified for food processing…"
+                placeholder="e.g. DOSH-approved equipment, BOMBA-compliant fire suppression, SIRIM-certified, corrosion resistant for coastal environment, halal-certified for food processing…"
                 className={`${inputCls} resize-none`}
               />
             </div>

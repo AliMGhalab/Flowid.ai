@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getFluidLabel } from '@/lib/fluidLabels';
 
 const RISK_COLORS: Record<string, string> = {
   low: 'bg-green-400/10 text-green-400',
@@ -25,9 +26,9 @@ const RISK_COLORS: Record<string, string> = {
 };
 
 function formatDate(d: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
+  return new Intl.DateTimeFormat('en-MY', {
     day: 'numeric',
+    month: 'short',
     year: 'numeric',
   }).format(d);
 }
@@ -116,15 +117,18 @@ export default function DashboardPage() {
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 py-24 text-center">
           <FolderOpen className="mb-4 h-12 w-12 text-slate-600" />
           <h3 className="mb-2 text-lg font-semibold text-white">No projects yet</h3>
-          <p className="mb-6 max-w-sm text-sm text-slate-400">
-            Create your first fluid system design and it will appear here.
+          <p className="mb-2 max-w-sm text-sm text-slate-400">
+            Describe your fluid system and get a complete BOM, risk register, and cost estimate in under 4 minutes.
+          </p>
+          <p className="mb-6 max-w-sm text-xs text-slate-500">
+            Malaysian suppliers · MYR pricing · DOSH &amp; BOMBA compliance
           </p>
           <Link
             href="/new-project"
             className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
           >
             <Plus className="h-4 w-4" />
-            Create First Project
+            Generate Your First System
           </Link>
         </div>
       ) : (
@@ -160,7 +164,7 @@ export default function DashboardPage() {
                         {project.projectName}
                       </h3>
                       <p className="text-xs text-slate-400">
-                        {project.input.industry} · {project.input.fluidType.replace(/_/g, ' ')}
+                        {project.input.industry} · {getFluidLabel(project.input.fluidType, project.input.customFluidType)}
                         {project.input.malaysiaState && ` · ${project.input.malaysiaState.replace(/_/g, ' ')}`}
                       </p>
                     </div>
@@ -208,8 +212,10 @@ export default function DashboardPage() {
       <div className="mt-8 flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
         <p className="text-xs text-slate-500">
-          AI-generated recommendations are for engineering guidance only. Always verify with a
-          licensed professional engineer before procurement or installation.
+          <span className="font-medium text-slate-400">Engineering disclaimer — </span>
+          All outputs are AI-generated feasibility documents intended to support the work of a licensed professional engineer.
+          Review and verify all designs before procurement, fabrication, or installation.
+          Reports do not constitute a certified design under DOSH, BOMBA, or any Malaysian regulatory framework.
         </p>
       </div>
     </div>

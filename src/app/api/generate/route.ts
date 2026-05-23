@@ -8,6 +8,7 @@ function getChutesClient() {
   return new OpenAI({
     apiKey: process.env.CHUTES_API_KEY!,
     baseURL: 'https://llm.chutes.ai/v1',
+    maxRetries: 0, // we handle fallback ourselves — don't waste seconds on doomed retries
   });
 }
 
@@ -15,6 +16,7 @@ function getGeminiClient() {
   return new OpenAI({
     apiKey: process.env.GEMINI_API_KEY ?? 'placeholder',
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    maxRetries: 0,
   });
 }
 

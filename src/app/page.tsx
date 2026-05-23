@@ -199,7 +199,7 @@ export default function LandingPage() {
                 href="/signup"
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-500 hover:shadow-blue-500/30"
               >
-                Generate Your First System Free
+                Get Started Free
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
@@ -517,7 +517,7 @@ export default function LandingPage() {
             href="/signup"
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-500"
           >
-            Generate Your First System Free
+            Get Started Free
             <ArrowRight className="h-5 w-5" />
           </Link>
           <p className="mt-4 text-sm text-slate-500">

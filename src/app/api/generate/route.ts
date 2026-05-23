@@ -541,7 +541,7 @@ function buildModelRoster(): ModelConfig[] {
 
   // Cerebras Qwen 235B — fast, large, returns clean JSON
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 8000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 16000 });
   }
 
   return roster;

@@ -4,21 +4,24 @@ import type { ProjectInput } from '@/types';
 
 export const maxDuration = 120;
 
-function getClient() {
-  // Uses Groq (free) by default; swap to Chutes when credits are added
-  const groqKey = process.env.GROQ_API_KEY;
-  const chutesKey = process.env.CHUTES_API_KEY;
-
-  if (chutesKey) {
-    return new OpenAI({
-      apiKey: chutesKey,
-      baseURL: 'https://llm.chutes.ai/v1',
-    });
-  }
-
+function getChutesClient() {
   return new OpenAI({
-    apiKey: groqKey ?? 'placeholder',
+    apiKey: process.env.CHUTES_API_KEY!,
+    baseURL: 'https://llm.chutes.ai/v1',
+  });
+}
+
+function getGroqClient() {
+  return new OpenAI({
+    apiKey: process.env.GROQ_API_KEY ?? 'placeholder',
     baseURL: 'https://api.groq.com/openai/v1',
+  });
+}
+
+function getGeminiClient() {
+  return new OpenAI({
+    apiKey: process.env.GEMINI_API_KEY ?? 'placeholder',
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
   });
 }
 
@@ -496,23 +499,40 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 
 // ─── Model roster — tried in order until one succeeds ────────────────────────
 //
-// Primary:  llama-3.3-70b-versatile  — best quality, 100k TPD on Groq free tier
-// Fallback: llama-3.1-8b-instant     — lighter, 500k TPD on Groq free tier
-// Last:     gemma2-9b-it             — extra fallback, separate quota
-//
-// Chutes (DeepSeek) takes priority when CHUTES_API_KEY is set.
+// Priority order:
+//  1. Chutes / DeepSeek V3  — if CHUTES_API_KEY is set (paid, best quality)
+//  2. Gemini 2.0 Flash      — if GEMINI_API_KEY is set (free, 1M TPD)
+//  3. Groq llama-3.3-70b    — free, 100k TPD
+//  4. Groq llama-3.1-8b     — free, 500k TPD (fallback)
+//  5. Groq gemma2-9b        — free, separate quota (last resort)
 
 interface ModelConfig {
+  provider: 'chutes' | 'gemini' | 'groq';
   model: string;
   max_tokens: number;
 }
 
-function getGroqModels(): ModelConfig[] {
-  return [
-    { model: 'llama-3.3-70b-versatile', max_tokens: 8000 },
-    { model: 'llama-3.1-8b-instant',    max_tokens: 6000 },
-    { model: 'gemma2-9b-it',            max_tokens: 6000 },
-  ];
+function buildModelRoster(): ModelConfig[] {
+  const roster: ModelConfig[] = [];
+
+  if (process.env.CHUTES_API_KEY) {
+    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
+  }
+  if (process.env.GEMINI_API_KEY) {
+    roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
+  }
+  // Always include Groq as fallback (key may or may not work)
+  roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
+  roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant',    max_tokens: 6000 });
+  roster.push({ provider: 'groq', model: 'gemma2-9b-it',            max_tokens: 6000 });
+
+  return roster;
+}
+
+function clientForConfig(cfg: ModelConfig) {
+  if (cfg.provider === 'chutes') return getChutesClient();
+  if (cfg.provider === 'gemini') return getGeminiClient();
+  return getGroqClient();
 }
 
 function isRateLimitError(err: unknown): boolean {
@@ -533,19 +553,17 @@ async function generateWithModel(
   input: ProjectInput,
   cfg: ModelConfig
 ): Promise<Record<string, unknown>> {
-  const client = getClient();
-  const model = process.env.CHUTES_API_KEY ? 'deepseek-ai/DeepSeek-V3.2-TEE' : cfg.model;
-  const max_tokens = process.env.CHUTES_API_KEY ? 12000 : cfg.max_tokens;
+  const client = clientForConfig(cfg);
 
-  console.log(`[/api/generate] trying model=${model} max_tokens=${max_tokens}`);
+  console.log(`[/api/generate] trying provider=${cfg.provider} model=${cfg.model} max_tokens=${cfg.max_tokens}`);
 
   const completion = await client.chat.completions.create({
-    model,
+    model: cfg.model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: buildPrompt(input) },
     ],
-    max_tokens,
+    max_tokens: cfg.max_tokens,
     temperature: 0.2,
   });
 
@@ -563,14 +581,8 @@ export async function POST(request: NextRequest) {
   try {
     const input: ProjectInput = await request.json();
 
-    // If Chutes is configured, use it directly (single attempt)
-    if (process.env.CHUTES_API_KEY) {
-      const recommendation = await generateWithModel(input, { model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 12000 });
-      return NextResponse.json({ recommendation });
-    }
-
-    // Groq: walk through model roster, skip on rate-limit errors, retry on JSON errors
-    const models = getGroqModels();
+    // Walk through the model roster (Chutes → Gemini → Groq fallbacks)
+    const models = buildModelRoster();
     let lastError: unknown;
 
     for (const cfg of models) {

@@ -1,0 +1,704 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
+import { getProject } from '@/lib/firestore';
+import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule } from '@/types';
+import {
+  ArrowLeft,
+  LayoutDashboard,
+  Package,
+  GitBranch,
+  ShieldAlert,
+  Wrench,
+  DollarSign,
+  Building2,
+  Clock,
+  Droplets,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Info,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatCurrency(n: number) {
+  return 'RM ' + new Intl.NumberFormat('en-MY', { maximumFractionDigits: 0 }).format(n ?? 0);
+}
+
+type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+const RISK_BADGE: Record<RiskLevel, string> = {
+  low: 'bg-green-400/10 text-green-400 border-green-400/20',
+  medium: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
+  high: 'bg-orange-400/10 text-orange-400 border-orange-400/20',
+  critical: 'bg-red-400/10 text-red-400 border-red-400/20',
+};
+
+const RISK_ICON: Record<RiskLevel, React.ElementType> = {
+  low: CheckCircle2,
+  medium: Info,
+  high: AlertTriangle,
+  critical: XCircle,
+};
+
+const CATEGORY_BADGE: Record<string, string> = {
+  pump: 'bg-blue-400/10 text-blue-400',
+  valve: 'bg-green-400/10 text-green-400',
+  filter: 'bg-yellow-400/10 text-yellow-400',
+  vessel: 'bg-purple-400/10 text-purple-400',
+  fitting: 'bg-slate-400/10 text-slate-400',
+  electrical: 'bg-red-400/10 text-red-400',
+  safety: 'bg-red-400/10 text-red-400',
+  instrument: 'bg-cyan-400/10 text-cyan-400',
+  other: 'bg-slate-400/10 text-slate-400',
+};
+
+function RiskBadge({ level }: { level: string }) {
+  const l = (level ?? 'low') as RiskLevel;
+  const Icon = RISK_ICON[l] ?? Info;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${RISK_BADGE[l] ?? RISK_BADGE.low}`}>
+      <Icon className="h-3 w-3" />
+      {l}
+    </span>
+  );
+}
+
+// ─── Tab definitions ─────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'components', label: 'Components', icon: Package },
+  { id: 'piping', label: 'Piping & Instruments', icon: GitBranch },
+  { id: 'risks', label: 'Risk Assessment', icon: ShieldAlert },
+  { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+  { id: 'costs', label: 'Cost Estimate', icon: DollarSign },
+  { id: 'vendors', label: 'Vendors & Standards', icon: Building2 },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionCard({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      {title && <h3 className="mb-4 font-semibold text-white">{title}</h3>}
+      {children}
+    </div>
+  );
+}
+
+function OverviewTab({ project }: { project: Project }) {
+  const rec = project.recommendation!;
+  return (
+    <div className="space-y-4">
+      <SectionCard title="System Overview">
+        <p className="mb-4 text-slate-300 leading-relaxed">{rec.summary}</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-slate-800/60 p-4">
+            <p className="mb-1 text-xs text-slate-500">System Type</p>
+            <p className="text-sm font-medium text-white">{rec.system_type}</p>
+          </div>
+          <div className="rounded-xl bg-slate-800/60 p-4">
+            <p className="mb-1 text-xs text-slate-500">Lead Time</p>
+            <p className="text-sm font-medium text-white flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-blue-400" />
+              {rec.lead_time_weeks} weeks
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-800/60 p-4">
+            <p className="mb-1 text-xs text-slate-500">Overall Risk</p>
+            <RiskBadge level={rec.risk_assessment?.overall_risk_level ?? 'low'} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Design Basis">
+        <p className="text-slate-300 leading-relaxed">{rec.design_basis}</p>
+      </SectionCard>
+
+      <SectionCard title="Project Parameters">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { label: 'Fluid', value: (project.input.fluidType === 'chemical' || project.input.fluidType === 'other') ? project.input.customFluidType : project.input.fluidType?.replace(/_/g, ' ') },
+            { label: 'Industry', value: project.input.industry },
+            { label: 'Location', value: project.input.malaysiaState?.replace(/_/g, ' ') ?? '—' },
+            { label: 'Site Environment', value: project.input.siteEnvironment?.replace(/_/g, ' ') ?? '—' },
+            { label: 'Budget', value: formatCurrency(project.input.budget) },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg bg-slate-800/40 px-3 py-2.5">
+              <p className="text-xs text-slate-500">{item.label}</p>
+              <p className="mt-0.5 text-sm font-medium capitalize text-white">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {rec.process_parameters && (
+        <SectionCard title="AI-Determined Process Parameters">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: 'Design Flow Rate', value: rec.process_parameters.design_flow_rate },
+              { label: 'Operating Pressure', value: rec.process_parameters.operating_pressure },
+              { label: 'Design Pressure', value: rec.process_parameters.design_pressure },
+              { label: 'Operating Temperature', value: rec.process_parameters.operating_temperature },
+              { label: 'Design Temperature', value: rec.process_parameters.design_temperature },
+              { label: 'Fluid Velocity', value: rec.process_parameters.fluid_velocity },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg bg-blue-600/10 px-3 py-2.5 border border-blue-600/20">
+                <p className="text-xs text-blue-400/70">{item.label}</p>
+                <p className="mt-0.5 text-sm font-medium text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+          {rec.process_parameters.basis && (
+            <p className="mt-4 text-xs text-slate-400 leading-relaxed">
+              <span className="font-medium text-slate-300">Engineering basis: </span>
+              {rec.process_parameters.basis}
+            </p>
+          )}
+        </SectionCard>
+      )}
+
+      {rec.engineering_notes && (
+        <SectionCard title="Engineering Notes">
+          <p className="text-slate-300 leading-relaxed">{rec.engineering_notes}</p>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+function ComponentsTab({ components }: { components: SystemComponent[] }) {
+  const [filter, setFilter] = useState('all');
+  const categories = ['all', ...Array.from(new Set(components.map((c) => c.category)))];
+  const filtered = filter === 'all' ? components : components.filter((c) => c.category === filter);
+
+  return (
+    <div className="space-y-4">
+      {/* Category filter */}
+      <div className="flex flex-wrap gap-2">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${
+              filter === cat
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-800">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-800 bg-slate-900">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Component</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell">Specification</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hidden lg:table-cell">Supplier / Model</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Total Cost</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 bg-slate-900">
+            {filtered.map((c) => (
+              <tr key={c.id} className="transition-colors hover:bg-slate-800/50">
+                <td className="px-4 py-3">
+                  <span className="font-mono text-xs text-blue-400">{c.id}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-white">{c.name}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${CATEGORY_BADGE[c.category] ?? CATEGORY_BADGE.other}`}>
+                      {c.category}
+                    </span>
+                    {c.material && (
+                      <span className="text-xs text-slate-500 hidden sm:inline">{c.material.split(' ')[0]}</span>
+                    )}
+                  </div>
+                  {c.notes && (
+                    <p className="mt-1 text-xs text-slate-500 line-clamp-2 md:hidden">{c.notes}</p>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-400 hidden md:table-cell max-w-xs">
+                  <p className="line-clamp-2">{c.specification}</p>
+                  {c.notes && <p className="mt-1 text-slate-500 line-clamp-1">{c.notes}</p>}
+                </td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  <div className="text-sm text-white">{c.supplier}</div>
+                  <div className="text-xs text-slate-400">{c.model}</div>
+                </td>
+                <td className="px-4 py-3 text-right text-sm text-white">{c.quantity}</td>
+                <td className="px-4 py-3 text-right font-medium text-green-400">
+                  {formatCurrency((c as SystemComponent & { total_cost_myr?: number }).total_cost_myr ?? c.total_cost_usd)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-slate-700 bg-slate-800/60">
+              <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-white">
+                Equipment Subtotal
+              </td>
+              <td className="px-4 py-3 text-right font-bold text-green-400">
+                {formatCurrency(filtered.reduce((sum, c) => sum + ((c as SystemComponent & { total_cost_myr?: number }).total_cost_myr ?? c.total_cost_usd ?? 0), 0))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PipingTab({ project }: { project: Project }) {
+  const rec = project.recommendation!;
+  const piping = rec.piping;
+  const instruments = rec.instrumentation ?? [];
+
+  return (
+    <div className="space-y-4">
+      {piping && (
+        <SectionCard title="Piping Specification">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: 'Material', value: piping.material },
+              { label: 'Nominal Diameter', value: `${piping.nominal_diameter_inch}"` },
+              { label: 'Schedule', value: `Sch. ${piping.schedule}` },
+              { label: 'Connection Type', value: piping.connection_type },
+              { label: 'Insulation', value: piping.insulation_required ? (piping.insulation_type ?? 'Yes') : 'Not required' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-slate-800/60 p-4">
+                <p className="mb-1 text-xs text-slate-500">{item.label}</p>
+                <p className="text-sm font-medium capitalize text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+          {piping.design_notes && (
+            <p className="mt-4 text-sm text-slate-400">{piping.design_notes}</p>
+          )}
+        </SectionCard>
+      )}
+
+      {instruments.length > 0 && (
+        <div>
+          <h3 className="mb-3 font-semibold text-white">Instrumentation List</h3>
+          <div className="overflow-x-auto rounded-2xl border border-slate-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900">
+                  {['Tag', 'Description', 'Service', 'Range', 'Material', 'Supplier', 'Unit Cost'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 bg-slate-900">
+                {instruments.map((inst: Instrument) => (
+                  <tr key={inst.tag} className="transition-colors hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-mono text-xs text-cyan-400">{inst.tag}</td>
+                    <td className="px-4 py-3 text-white">{inst.description}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{inst.service}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{inst.range}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{inst.material}</td>
+                    <td className="px-4 py-3 text-xs text-slate-300">{inst.supplier}</td>
+                    <td className="px-4 py-3 text-right font-medium text-green-400">
+                      {formatCurrency((inst as Instrument & { unit_cost_myr?: number }).unit_cost_myr ?? inst.unit_cost_usd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RisksTab({ project }: { project: Project }) {
+  const ra = project.recommendation?.risk_assessment;
+  if (!ra) return <p className="text-slate-400">No risk data available.</p>;
+
+  return (
+    <div className="space-y-4">
+      <SectionCard>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs text-slate-500 mb-1">Overall Risk Level</p>
+            <RiskBadge level={ra.overall_risk_level} />
+          </div>
+          {ra.hazop_summary && (
+            <p className="text-sm text-slate-400 sm:max-w-md sm:text-right">{ra.hazop_summary}</p>
+          )}
+        </div>
+      </SectionCard>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-800">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-800 bg-slate-900">
+              {['ID', 'Category', 'Hazard', 'Cause', 'Likelihood', 'Severity', 'Risk Level', 'Mitigation'].map((h) => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 bg-slate-900">
+            {(ra.risks ?? []).map((r: Risk) => (
+              <tr key={r.id} className="transition-colors hover:bg-slate-800/50">
+                <td className="px-4 py-3 font-mono text-xs text-slate-400">{r.id}</td>
+                <td className="px-4 py-3">
+                  <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs capitalize text-slate-300">
+                    {r.category}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-white max-w-[160px]">
+                  <p className="line-clamp-2">{r.hazard}</p>
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-400 max-w-[140px]">
+                  <p className="line-clamp-2">{r.cause}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <RiskBadge level={r.likelihood} />
+                </td>
+                <td className="px-4 py-3">
+                  <RiskBadge level={r.severity} />
+                </td>
+                <td className="px-4 py-3">
+                  <RiskBadge level={r.risk_level} />
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-400 max-w-[200px]">
+                  <p className="line-clamp-3">{r.mitigation}</p>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function MaintenanceTab({ schedule }: { schedule: MaintenanceSchedule[] }) {
+  const order = ['daily', 'weekly', 'monthly', 'quarterly', 'biannual', 'annual'];
+  const sorted = [...(schedule ?? [])].sort(
+    (a, b) => order.indexOf(a.frequency) - order.indexOf(b.frequency)
+  );
+
+  const FREQ_COLORS: Record<string, string> = {
+    daily: 'bg-blue-400/10 text-blue-400',
+    weekly: 'bg-cyan-400/10 text-cyan-400',
+    monthly: 'bg-green-400/10 text-green-400',
+    quarterly: 'bg-yellow-400/10 text-yellow-400',
+    biannual: 'bg-orange-400/10 text-orange-400',
+    annual: 'bg-red-400/10 text-red-400',
+  };
+
+  return (
+    <div className="space-y-4">
+      {sorted.map((entry) => (
+        <SectionCard key={entry.frequency}>
+          <div className="mb-4 flex items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${FREQ_COLORS[entry.frequency] ?? 'bg-slate-400/10 text-slate-400'}`}>
+              {entry.frequency}
+            </span>
+            <span className="text-sm text-slate-400">
+              {entry.tasks?.length ?? 0} task{(entry.tasks?.length ?? 0) !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {(entry.tasks ?? []).map((task, i) => (
+              <div key={i} className="rounded-xl border border-slate-800 bg-slate-800/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h4 className="font-medium text-white">{task.task}</h4>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-xs text-slate-400">
+                      {task.estimated_duration_hours}h
+                    </span>
+                    {task.requires_shutdown && (
+                      <span className="rounded-full bg-red-400/10 px-2 py-0.5 text-xs text-red-400">
+                        Shutdown required
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {task.procedure && (
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-400">{task.procedure}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      ))}
+    </div>
+  );
+}
+
+type MyrCostEst = {
+  equipment_cost_myr?: number; equipment_cost_usd?: number;
+  installation_cost_myr?: number; installation_cost_usd?: number;
+  engineering_cost_myr?: number; engineering_cost_usd?: number;
+  commissioning_cost_myr?: number; commissioning_cost_usd?: number;
+  total_cost_myr?: number; total_cost_usd?: number;
+  within_budget?: boolean; budget_notes?: string;
+};
+
+function CostsTab({ project }: { project: Project }) {
+  const est = project.recommendation?.cost_estimate as MyrCostEst | undefined;
+  if (!est) return <p className="text-slate-400">No cost data available.</p>;
+
+  const equip = est.equipment_cost_myr ?? est.equipment_cost_usd ?? 0;
+  const install = est.installation_cost_myr ?? est.installation_cost_usd ?? 0;
+  const eng = est.engineering_cost_myr ?? est.engineering_cost_usd ?? 0;
+  const comm = est.commissioning_cost_myr ?? est.commissioning_cost_usd ?? 0;
+  const total = est.total_cost_myr ?? est.total_cost_usd ?? 0;
+
+  const rows = [
+    { label: 'Equipment', value: equip },
+    { label: 'Installation', value: install },
+    { label: 'Engineering', value: eng },
+    { label: 'Commissioning & Start-up', value: comm },
+  ];
+
+  const budgetUsed = total > 0 ? (total / project.input.budget) * 100 : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <SectionCard>
+          <p className="mb-1 text-xs text-slate-500">Total Estimate</p>
+          <p className="text-2xl font-bold text-white">{formatCurrency(total)}</p>
+        </SectionCard>
+        <SectionCard>
+          <p className="mb-1 text-xs text-slate-500">Project Budget</p>
+          <p className="text-2xl font-bold text-white">{formatCurrency(project.input.budget)}</p>
+        </SectionCard>
+        <SectionCard>
+          <p className="mb-1 text-xs text-slate-500">Budget Status</p>
+          <div className="flex items-center gap-2">
+            {est.within_budget !== false ? (
+              <CheckCircle2 className="h-5 w-5 text-green-400" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-400" />
+            )}
+            <span className={`font-semibold ${est.within_budget !== false ? 'text-green-400' : 'text-red-400'}`}>
+              {est.within_budget !== false ? 'Within Budget' : 'Exceeds Budget'}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">{Math.round(budgetUsed)}% of budget used</p>
+        </SectionCard>
+      </div>
+
+      <SectionCard title="Cost Breakdown">
+        <div className="space-y-2">
+          {rows.map((row) => {
+            const pct = total > 0 ? (row.value / total) * 100 : 0;
+            return (
+              <div key={row.label}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="text-slate-300">{row.label}</span>
+                  <span className="font-medium text-white">{formatCurrency(row.value)}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex items-center justify-between border-t border-slate-700 pt-3 text-sm font-bold">
+            <span className="text-white">Total Project Cost</span>
+            <span className="text-lg text-green-400">{formatCurrency(total)}</span>
+          </div>
+        </div>
+        {est.budget_notes && (
+          <p className="mt-4 text-sm text-slate-400">{est.budget_notes}</p>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+function VendorsTab({ project }: { project: Project }) {
+  const vendors = project.recommendation?.recommended_vendors ?? [];
+  const standards = project.recommendation?.compliance_standards ?? [];
+
+  return (
+    <div className="space-y-4">
+      {vendors.length > 0 && (
+        <SectionCard title="Recommended Vendors">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {vendors.map((v) => (
+              <div key={v.vendor} className="rounded-xl border border-slate-800 bg-slate-800/40 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-medium text-white">{v.vendor}</h4>
+                  <span className="shrink-0 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                    {v.region}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{v.specialty}</p>
+                {v.website_hint && (
+                  <p className="mt-1.5 text-xs text-blue-400">{v.website_hint}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {standards.length > 0 && (
+        <SectionCard title="Applicable Compliance Standards">
+          <div className="space-y-2">
+            {standards.map((s) => (
+              <div key={s.standard} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                <div>
+                  <span className="font-mono text-sm font-semibold text-white">{s.standard}</span>
+                  <p className="text-xs text-slate-400">{s.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function ProjectPage() {
+  const { id } = useParams<{ id: string }>();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  const [project, setProject] = useState<Project | null>(null);
+  const [fetching, setFetching] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login');
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user || !id) return;
+    getProject(id)
+      .then((p) => {
+        if (!p) { toast.error('Project not found'); router.replace('/dashboard'); return; }
+        if (p.userId !== user.uid) { router.replace('/dashboard'); return; }
+        setProject(p);
+      })
+      .catch(() => { toast.error('Failed to load project'); router.replace('/dashboard'); })
+      .finally(() => setFetching(false));
+  }, [user, id, router]);
+
+  if (authLoading || fetching || !project) {
+    return (
+      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+          <p className="text-sm text-slate-400">Loading project…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rec = project.recommendation;
+  if (!rec) {
+    return (
+      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
+        <p className="text-slate-400">No recommendation data for this project.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Back */}
+      <Link
+        href="/dashboard"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-white"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </Link>
+
+      {/* Header */}
+      <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600">
+              <Droplets className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white sm:text-2xl">{project.projectName}</h1>
+              <p className="mt-0.5 text-sm text-slate-400">
+                {project.input.industry} · {(project.input.fluidType === 'chemical' || project.input.fluidType === 'other') ? project.input.customFluidType : project.input.fluidType?.replace(/_/g, ' ')}
+                {project.input.malaysiaState && ` · ${project.input.malaysiaState.replace(/_/g, ' ')}, Malaysia`}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">{rec.system_type}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <RiskBadge level={rec.risk_assessment?.overall_risk_level ?? 'low'} />
+            <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-green-400">
+              {formatCurrency((rec.cost_estimate as typeof rec.cost_estimate & { total_cost_myr?: number })?.total_cost_myr ?? rec.cost_estimate?.total_cost_usd ?? 0)}
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300">
+              <Clock className="h-3 w-3" />
+              {rec.lead_time_weeks}w lead time
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="flex min-w-max gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div>
+        {activeTab === 'overview' && <OverviewTab project={project} />}
+        {activeTab === 'components' && <ComponentsTab components={rec.components ?? []} />}
+        {activeTab === 'piping' && <PipingTab project={project} />}
+        {activeTab === 'risks' && <RisksTab project={project} />}
+        {activeTab === 'maintenance' && <MaintenanceTab schedule={rec.maintenance_schedule ?? []} />}
+        {activeTab === 'costs' && <CostsTab project={project} />}
+        {activeTab === 'vendors' && <VendorsTab project={project} />}
+      </div>
+    </div>
+  );
+}

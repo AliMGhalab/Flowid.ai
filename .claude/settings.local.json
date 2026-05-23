@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --yes)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --yes --name flowid-ai)",
+      "Bash(npm install *)",
+      "Bash(npm show *)",
+      "Bash(mkdir -p \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/types\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/lib\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/components\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/\\(auth\\)/login\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/\\(auth\\)/signup\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/dashboard\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/new-project\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/project/[id]\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/src/app/api/generate\" \"/c/Users/Ali Ghalab/Desktop/Flowid.ai/public\" 2>&1)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(cd \"/c/Users/Ali Ghalab/Desktop/Flowid.ai\" && find src -type f | sort 2>&1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/generate -H 'Content-Type: application/json' -d '{\"projectName\":\"Test\",\"fluidType\":\"water\",\"flowRate\":100,\"flowRateUnit\":\"GPM\",\"operatingPressure\":50,\"pressureUnit\":\"PSI\",\"operatingTemperature\":70,\"temperatureUnit\":\"°F\",\"application\":\"test\",\"industry\":\"Oil & Gas\",\"location\":\"indoor_industrial\",\"budget\":50000}')",
+      "WebFetch(domain:docs.chutes.ai)",
+      "WebFetch(domain:chutes.ai)",
+      "WebSearch",
+      "WebFetch(domain:www.typingmind.com)",
+      "Bash(curl -s -k -H 'Authorization: Bearer cpk_00ff338080ef4f419acd08607e571715.88e2936ef63e5b8493dffecc361b8352.anBibCNPKmE5aZ7zq6hprOWhV9MOLKmB' https://llm.chutes.ai/v1/models)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['id']\\) for m in data.get\\('data',[]\\)]\")"
+    ]
+  }
+}

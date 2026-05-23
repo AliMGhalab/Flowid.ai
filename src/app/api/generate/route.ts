@@ -503,8 +503,7 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 //  1. Chutes / DeepSeek V3  — if CHUTES_API_KEY is set (paid, best quality)
 //  2. Gemini 2.0 Flash      — if GEMINI_API_KEY is set (free, 1M TPD)
 //  3. Groq llama-3.3-70b    — free, 100k TPD
-//  4. Groq llama-3.1-8b     — free, 500k TPD (fallback)
-//  5. Groq gemma2-9b        — free, separate quota (last resort)
+//  4. Groq llama-3.1-8b     — free, 500k TPD (last resort)
 
 interface ModelConfig {
   provider: 'chutes' | 'gemini' | 'groq';
@@ -524,7 +523,6 @@ function buildModelRoster(): ModelConfig[] {
   // Always include Groq as fallback (key may or may not work)
   roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
   roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant',    max_tokens: 6000 });
-  roster.push({ provider: 'groq', model: 'gemma2-9b-it',            max_tokens: 6000 });
 
   return roster;
 }

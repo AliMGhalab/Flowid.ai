@@ -352,20 +352,20 @@ TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967
 - ΔP/L = f × (ρ × v²) / (2 × D), convert to bar/100m
 Use water properties at operating temperature; adjust for other fluids.
 
-Return ONLY this JSON (fill every field with real engineering and commercial data). Keep text fields concise — 1–2 sentences maximum for notes, procedures, and descriptions. Use the token budget for complete component coverage, not verbose prose.
+Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST — fill it as completely as you can but never skip the sections above it. If you run low on tokens, truncate the BOM, NEVER skip piping/instrumentation/risks/costs/standards. Keep all text fields tight (1-2 sentences max).
 {
-  "summary": "2-3 sentence system overview including scale and key design decisions",
+  "summary": "2-3 sentence system overview",
   "system_type": "system classification",
-  "design_basis": "key engineering considerations, scale basis, Malaysian code references",
+  "design_basis": "engineering basis, scale, Malaysian code references",
   "overall_confidence": 85,
   "process_parameters": {
-    "design_flow_rate": "e.g. 45 m³/hr",
-    "operating_pressure": "e.g. 8 bar(g)",
-    "design_pressure": "e.g. 12 bar(g)",
-    "operating_temperature": "e.g. 65°C",
-    "design_temperature": "e.g. 85°C",
-    "fluid_velocity": "e.g. 2.5 m/s",
-    "basis": "2-3 sentences explaining how values were determined from application and scale inputs"
+    "design_flow_rate": "45 m³/hr",
+    "operating_pressure": "8 bar(g)",
+    "design_pressure": "12 bar(g)",
+    "operating_temperature": "65°C",
+    "design_temperature": "85°C",
+    "fluid_velocity": "2.5 m/s",
+    "basis": "1-2 sentences on how values were determined"
   },
   "engineering_calculations": {
     "npsh_available_m": 7.2,
@@ -382,8 +382,51 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
     "friction_factor": 0.019,
     "pressure_drop_bar_per_100m": 0.42,
     "heat_load_kw": 175,
-    "notes": "Calculations per Darcy-Weisbach for water at 35°C, density 994 kg/m³, viscosity 0.72 cP. NPSH margin > 0.6 m per API 610. Motor selected one size above shaft power per IEC 60034. Heat load only for cooling/heating systems — set 0 or omit if not applicable."
+    "notes": "Darcy-Weisbach for water at op temp; NPSH margin per API 610; motor sized per IEC 60034"
   },
+  "piping": {
+    "material": "e.g. Carbon Steel, SS316L, HDPE",
+    "nominal_diameter_inch": 2,
+    "schedule": "40",
+    "connection_type": "flanged|threaded|welded",
+    "insulation_required": false,
+    "insulation_type": null,
+    "design_notes": "corrosion allowance + sizing basis"
+  },
+  "instrumentation": [
+    { "tag": "FT-101", "description": "Flow Transmitter — Main Line", "type": "flow", "service": "monitor flow", "range": "0-100 m³/hr", "material": "lined body, SS electrodes", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
+    { "tag": "PT-101", "description": "Pressure Transmitter — Pump Discharge", "type": "pressure", "service": "discharge pressure", "range": "0-10 bar(g)", "material": "SS316 wetted", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
+    { "tag": "PT-102", "description": "Pressure Transmitter — Pump Suction", "type": "pressure", "service": "suction pressure", "range": "0-10 bar(g)", "material": "SS316 wetted", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
+    { "tag": "TT-101", "description": "Temperature Transmitter", "type": "temperature", "service": "process temp", "range": "0-100°C", "material": "SS316 thermowell", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 }
+  ],
+  "risk_assessment": {
+    "overall_risk_level": "low|medium|high|critical",
+    "hazop_summary": "1-2 sentences with Malaysian regulatory context",
+    "risks": [
+      { "id": "R-001", "category": "mechanical|chemical|thermal|electrical|operational|environmental", "hazard": "NO FLOW in main discharge — describe", "cause": "pump trip / valve closed", "consequence": "process upset", "likelihood": "low|medium|high", "severity": "low|medium|high|critical", "risk_level": "low|medium|high|critical", "safeguard": "PT low alarm, auto-trip", "mitigation": "DOSH/BOMBA reference" }
+    ]
+  },
+  "maintenance_schedule": [
+    { "frequency": "daily|weekly|monthly|quarterly|biannual|annual", "tasks": [ { "task": "name", "procedure": "brief", "estimated_duration_hours": 1, "requires_shutdown": false } ] }
+  ],
+  "compliance_standards": [
+    { "standard": "DOSH FMA 1967", "description": "pressure vessel registration" }
+  ],
+  "cost_estimate": {
+    "equipment_cost_myr": 0,
+    "transportation_cost_myr": 0,
+    "installation_cost_myr": 0,
+    "engineering_cost_myr": 0,
+    "commissioning_cost_myr": 0,
+    "total_cost_myr": 0,
+    "within_budget": true,
+    "budget_notes": "vs budget; transport from supplier cities to project state; East MY premium if applicable"
+  },
+  "lead_time_weeks": 8,
+  "recommended_vendors": [
+    { "vendor": "Vendor Name", "specialty": "what they supply", "region": "Malaysian state", "website_hint": "vendor.com.my" }
+  ],
+  "engineering_notes": "design recs, commissioning notes, MY-specific points, confidence caveats",
   "components": [
     {
       "id": "C-001",
@@ -422,95 +465,7 @@ Return ONLY this JSON (fill every field with real engineering and commercial dat
         }
       ]
     }
-  ],
-  "piping": {
-    "material": "pipe material (e.g. Carbon Steel, SS316L, HDPE)",
-    "nominal_diameter_inch": 2,
-    "schedule": "40",
-    "connection_type": "flanged|threaded|welded",
-    "insulation_required": false,
-    "insulation_type": null,
-    "design_notes": "piping notes including corrosion allowance for Malaysian climate and sizing basis"
-  },
-  "instrumentation": [
-    {
-      "tag": "FT-101",
-      "description": "Flow Transmitter — Main Process Line",
-      "type": "pressure|temperature|flow|level|analytical",
-      "service": "what it monitors",
-      "range": "0-100 m³/hr",
-      "material": "wetted material",
-      "supplier": "Malaysian supplier with city",
-      "unit_cost_myr": 0
-    },
-    {
-      "tag": "PT-101",
-      "description": "Pressure Transmitter — Pump Discharge",
-      "type": "pressure",
-      "service": "Pump discharge pressure monitoring",
-      "range": "0-10 bar(g)",
-      "material": "SS316 wetted parts",
-      "supplier": "Malaysian supplier with city",
-      "unit_cost_myr": 0
-    }
-  ],
-  "risk_assessment": {
-    "overall_risk_level": "low|medium|high|critical",
-    "hazop_summary": "brief HAZOP summary with Malaysian regulatory context",
-    "risks": [
-      {
-        "id": "R-001",
-        "category": "mechanical|chemical|thermal|electrical|operational|environmental",
-        "hazard": "hazard description (state the HAZOP guideword + deviation, e.g. 'NO FLOW in main discharge line')",
-        "cause": "potential cause",
-        "consequence": "potential consequence",
-        "likelihood": "low|medium|high",
-        "severity": "low|medium|high|critical",
-        "risk_level": "low|medium|high|critical",
-        "safeguard": "existing protection (instrumentation, PSV, interlock, procedure)",
-        "mitigation": "recommended action (reference DOSH/BOMBA/SIRIM where applicable)"
-      }
-    ]
-  },
-  "maintenance_schedule": [
-    {
-      "frequency": "daily|weekly|monthly|quarterly|biannual|annual",
-      "tasks": [
-        {
-          "task": "task name",
-          "procedure": "brief procedure",
-          "estimated_duration_hours": 1,
-          "requires_shutdown": false
-        }
-      ]
-    }
-  ],
-  "compliance_standards": [
-    {
-      "standard": "DOSH FMA 1967",
-      "description": "Factories & Machinery Act — pressure vessel registration"
-    }
-  ],
-  "cost_estimate": {
-    "equipment_cost_myr": 0,
-    "transportation_cost_myr": 0,
-    "installation_cost_myr": 0,
-    "engineering_cost_myr": 0,
-    "commissioning_cost_myr": 0,
-    "total_cost_myr": 0,
-    "within_budget": true,
-    "budget_notes": "cost summary vs RM budget; transportation calculated from supplier cities to ${state}; note any East Malaysia logistics premium"
-  },
-  "lead_time_weeks": 8,
-  "recommended_vendors": [
-    {
-      "vendor": "Vendor Name",
-      "specialty": "what they supply for this project",
-      "region": "Malaysian city/state",
-      "website_hint": "vendor.com.my or vendor.com"
-    }
-  ],
-  "engineering_notes": "additional design recommendations, commissioning notes, Malaysian-specific considerations, confidence caveats"
+  ]
 }`;
 }
 
@@ -672,13 +627,13 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras Qwen 235B — primary (fast inference; aim for < 25s completion)
+  // Cerebras Qwen 235B — primary (fast inference; 8s at 12k tokens earlier = plenty of room)
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 12000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 20000 });
   }
   // Mistral Medium — fallback (different vendor, native JSON mode)
   if (process.env.MISTRAL_API_KEY) {
-    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 8000 });
+    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
   }
 
   return roster;

@@ -626,7 +626,8 @@ function isRateLimitError(err: unknown): boolean {
     if (
       err.message.includes('429') ||
       err.message.toLowerCase().includes('rate limit') ||
-      err.message.toLowerCase().includes('too many')
+      err.message.toLowerCase().includes('too many') ||
+      err.message.toLowerCase().includes('timed out')
     ) return true;
     if ('status' in err) {
       const status = (err as { status: number }).status;
@@ -641,30 +642,53 @@ function isRateLimitError(err: unknown): boolean {
 
 async function generateWithModel(
   input: ProjectInput,
-  cfg: ModelConfig
+  cfg: ModelConfig,
+  timeoutMs = 35000, // hard per-provider timeout — leaves budget for fallback within Vercel's 60s
 ): Promise<Record<string, unknown>> {
   const client = clientForConfig(cfg);
+  const startedAt = Date.now();
 
-  console.log(`[/api/generate] trying provider=${cfg.provider} model=${cfg.model} max_tokens=${cfg.max_tokens}`);
+  console.log(`[/api/generate] trying provider=${cfg.provider} model=${cfg.model} max_tokens=${cfg.max_tokens} timeout=${timeoutMs}ms`);
 
-  const completion = await client.chat.completions.create({
-    model: cfg.model,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: buildPrompt(input) },
-    ],
-    max_tokens: cfg.max_tokens,
-    temperature: 0.2,
-    // Force JSON-only output (supported by Gemini and DeepSeek/Chutes)
-    response_format: { type: 'json_object' },
-  });
+  // AbortController prevents a slow provider from eating the entire Vercel function budget
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const content = completion.choices[0]?.message?.content;
-  if (!content) throw new Error('Empty response from AI model');
+  try {
+    const completion = await client.chat.completions.create(
+      {
+        model: cfg.model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: buildPrompt(input) },
+        ],
+        max_tokens: cfg.max_tokens,
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      },
+      { signal: controller.signal },
+    );
 
-  const recommendation = parseAIResponse(content);
-  validateRecommendation(recommendation);
-  return recommendation;
+    const elapsed = Date.now() - startedAt;
+    console.log(`[/api/generate] ${cfg.model} responded in ${elapsed}ms`);
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('Empty response from AI model');
+
+    const recommendation = parseAIResponse(content);
+    validateRecommendation(recommendation);
+    return recommendation;
+  } catch (err) {
+    const elapsed = Date.now() - startedAt;
+    if (controller.signal.aborted) {
+      console.warn(`[/api/generate] ${cfg.model} aborted after ${elapsed}ms (exceeded ${timeoutMs}ms)`);
+      throw new Error(`Provider ${cfg.model} timed out after ${Math.round(elapsed / 1000)}s`);
+    }
+    console.warn(`[/api/generate] ${cfg.model} failed after ${elapsed}ms`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────

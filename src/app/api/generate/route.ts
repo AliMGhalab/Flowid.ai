@@ -1,8 +1,144 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { z } from 'zod';
 import type { ProjectInput } from '@/types';
 
 export const maxDuration = 120;
+
+// ─── Schema validation (Zod — TypeScript's equivalent of Pydantic) ───────────
+// Strict schema enforcement on AI output prevents drift, missing fields, and
+// hallucinated values from reaching the user. Failed validation triggers retry.
+
+const RiskSchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  hazard: z.string(),
+  cause: z.string(),
+  consequence: z.string(),
+  likelihood: z.enum(['low', 'medium', 'high']),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  risk_level: z.enum(['low', 'medium', 'high', 'critical']),
+  safeguard: z.string(),
+  mitigation: z.string(),
+});
+
+const ComponentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  quantity: z.number().nonnegative(),
+  specification: z.string(),
+  material: z.string(),
+  supplier: z.string(),
+  model: z.string(),
+  unit_cost_myr: z.number().nonnegative().optional(),
+  total_cost_myr: z.number().nonnegative().optional(),
+  notes: z.string().optional().default(''),
+  confidence_level: z.number().min(0).max(100).optional(),
+  lifespan_years: z.number().positive().optional(),
+  lifespan_notes: z.string().optional(),
+  price_basis: z.string().optional(),
+  alternatives: z.array(z.any()).optional(),
+});
+
+const CostEstimateSchema = z.object({
+  equipment_cost_myr: z.number().nonnegative().optional(),
+  installation_cost_myr: z.number().nonnegative().optional(),
+  engineering_cost_myr: z.number().nonnegative().optional(),
+  commissioning_cost_myr: z.number().nonnegative().optional(),
+  transportation_cost_myr: z.number().nonnegative().optional(),
+  total_cost_myr: z.number().nonnegative().optional(),
+  within_budget: z.boolean(),
+  budget_notes: z.string().optional().default(''),
+}).passthrough();
+
+const RecommendationSchema = z.object({
+  summary: z.string().min(10),
+  system_type: z.string().min(3),
+  design_basis: z.string().optional().default(''),
+  components: z.array(ComponentSchema).min(1, 'BOM must contain at least one component'),
+  cost_estimate: CostEstimateSchema,
+  risk_assessment: z.object({
+    overall_risk_level: z.enum(['low', 'medium', 'high', 'critical']),
+    hazop_summary: z.string().optional().default(''),
+    risks: z.array(RiskSchema),
+  }).optional(),
+}).passthrough(); // allow extra fields without failing
+
+// ─── Hallucination safeguards — sanity-check the AI output ───────────────────
+// Server-side rules that catch nonsensical AI output BEFORE it reaches the user.
+
+interface ValidationWarning {
+  code: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+}
+
+function runSanityChecks(rec: Record<string, unknown>): ValidationWarning[] {
+  const warnings: ValidationWarning[] = [];
+
+  // 1. Cost integrity — sum of component costs should ≈ equipment_cost_myr (within 5%)
+  const components = (rec.components as Array<{ total_cost_myr?: number }> | undefined) ?? [];
+  const componentSum = components.reduce((s, c) => s + (c.total_cost_myr ?? 0), 0);
+  const est = rec.cost_estimate as { equipment_cost_myr?: number } | undefined;
+  const declared = est?.equipment_cost_myr;
+  if (declared && componentSum > 0) {
+    const drift = Math.abs(declared - componentSum) / Math.max(declared, componentSum);
+    if (drift > 0.05) {
+      warnings.push({
+        code: 'COST_MISMATCH',
+        severity: 'warning',
+        message: `Equipment subtotal (RM ${componentSum.toLocaleString('en-MY')}) differs from declared total (RM ${declared.toLocaleString('en-MY')}) by ${(drift * 100).toFixed(1)}%. AI may have miscounted.`,
+      });
+    }
+  }
+
+  // 2. NPSH margin sanity — pumps need at least 0.6 m margin per API 610
+  const ec = rec.engineering_calculations as { npsh_margin_m?: number } | undefined;
+  if (ec?.npsh_margin_m !== undefined && ec.npsh_margin_m < 0.6) {
+    warnings.push({
+      code: 'NPSH_MARGIN_LOW',
+      severity: 'warning',
+      message: `NPSH margin is ${ec.npsh_margin_m} m — below API 610 minimum of 0.6 m. Cavitation risk; verify suction conditions.`,
+    });
+  }
+
+  // 3. Supplier whitelist — Malaysian suppliers should contain Malaysia / Sdn Bhd / known cities
+  const MY_TOKENS = [
+    'malaysia', 'sdn bhd', 'sdn. bhd', 'm sdn', 'shah alam', 'petaling jaya', 'kuala lumpur',
+    'penang', 'johor', 'subang', 'puchong', 'klang', 'putrajaya', 'cyberjaya', 'ipoh',
+    'bayan lepas', 'kota kinabalu', 'kuching', 'bangi', 'kajang', 'selangor', 'sarawak', 'sabah',
+  ];
+  const suspectSuppliers: string[] = [];
+  for (const c of components) {
+    const sup = ((c as { supplier?: string }).supplier ?? '').toLowerCase();
+    if (!sup) continue;
+    const looksMalaysian = MY_TOKENS.some((t) => sup.includes(t));
+    if (!looksMalaysian) suspectSuppliers.push((c as { supplier?: string }).supplier ?? '');
+  }
+  if (suspectSuppliers.length > 0) {
+    warnings.push({
+      code: 'SUPPLIER_NOT_MY',
+      severity: 'info',
+      message: `${suspectSuppliers.length} supplier(s) don't match Malaysian patterns: ${suspectSuppliers.slice(0, 3).join(', ')}${suspectSuppliers.length > 3 ? '...' : ''}. Verify location.`,
+    });
+  }
+
+  // 4. Component cost outliers — flag single items > 50% of total (might be misplaced decimal)
+  if (componentSum > 0) {
+    for (const c of components as Array<{ name?: string; total_cost_myr?: number }>) {
+      if ((c.total_cost_myr ?? 0) > componentSum * 0.5) {
+        warnings.push({
+          code: 'COST_OUTLIER',
+          severity: 'info',
+          message: `"${c.name}" is RM ${c.total_cost_myr?.toLocaleString('en-MY')} — over 50% of total. Possible misplaced decimal; verify.`,
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
 
 function getChutesClient() {
   return new OpenAI({
@@ -585,12 +721,15 @@ function parseAIResponse(content: string): Record<string, unknown> {
 // ─── Response validation ──────────────────────────────────────────────────────
 
 function validateRecommendation(rec: Record<string, unknown>): void {
-  const required = ['summary', 'system_type', 'components', 'cost_estimate'];
-  for (const field of required) {
-    if (!rec[field]) throw new Error(`AI response missing required field: "${field}"`);
+  const result = RecommendationSchema.safeParse(rec);
+  if (!result.success) {
+    // Pull out the first 3 issues for a concise error message
+    const issues = result.error.issues.slice(0, 3).map((i) => {
+      const path = i.path.join('.');
+      return `${path}: ${i.message}`;
+    }).join('; ');
+    throw new Error(`AI response failed schema validation — ${issues}`);
   }
-  if (!Array.isArray(rec.components)) throw new Error('AI response "components" is not an array');
-  if ((rec.components as unknown[]).length === 0) throw new Error('AI response returned zero components');
 }
 
 // ─── Model roster — tried in order until one succeeds ────────────────────────
@@ -681,7 +820,11 @@ export async function POST(request: NextRequest) {
     for (const cfg of models) {
       try {
         const recommendation = await generateWithModel(input, cfg);
-        return NextResponse.json({ recommendation });
+        const warnings = runSanityChecks(recommendation);
+        if (warnings.length > 0) {
+          console.log(`[/api/generate] ${warnings.length} sanity-check warning(s):`, warnings.map((w) => w.code).join(', '));
+        }
+        return NextResponse.json({ recommendation, validation_warnings: warnings });
       } catch (err) {
         lastError = err;
         if (isRateLimitError(err)) {

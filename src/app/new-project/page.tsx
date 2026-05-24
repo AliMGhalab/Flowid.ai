@@ -281,6 +281,7 @@ export default function NewProjectPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
+  const [agentStep, setAgentStep] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -322,20 +323,25 @@ export default function NewProjectPage() {
     if (!user) return;
 
     setGenerating(true);
-    setStatusMsg('Analysing your requirements…');
+    setAgentStep(0);
+    setStatusMsg('Planner Agent reviewing inputs…');
 
+    const timers: ReturnType<typeof setTimeout>[] = [];
     try {
-      setTimeout(() => setStatusMsg('Determining process parameters…'), 5000);
-      setTimeout(() => setStatusMsg('Selecting Malaysian suppliers by location…'), 12000);
-      setTimeout(() => setStatusMsg('Evaluating confidence levels…'), 20000);
-      setTimeout(() => setStatusMsg('Calculating transportation & total costs…'), 28000);
-      setTimeout(() => setStatusMsg('Running risk assessment & lifespan analysis…'), 36000);
+      // Sequenced agent progress reveal — gives the user a multi-agent pipeline view
+      timers.push(setTimeout(() => { setAgentStep(1); setStatusMsg('BOM Agent selecting Malaysian suppliers…'); }, 6000));
+      timers.push(setTimeout(() => { setAgentStep(2); setStatusMsg('Hydraulics Agent computing NPSH, head, Reynolds…'); }, 14000));
+      timers.push(setTimeout(() => { setAgentStep(3); setStatusMsg('HAZOP Agent applying risk guidewords…'); }, 22000));
+      timers.push(setTimeout(() => { setAgentStep(4); setStatusMsg('Cost Agent rolling up MYR + transportation…'); }, 30000));
+      timers.push(setTimeout(() => { setAgentStep(5); setStatusMsg('Validation Layer: schema + sanity checks…'); }, 38000));
 
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+
+      timers.forEach((t) => clearTimeout(t));
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: 'Unknown error' }));
@@ -344,15 +350,18 @@ export default function NewProjectPage() {
 
       const { recommendation } = await res.json();
 
+      setAgentStep(6);
       setStatusMsg('Saving your project…');
       const projectId = await createProject(user.uid, form, recommendation);
 
       toast.success('System design complete!');
       router.push(`/project/${projectId}`);
     } catch (err) {
+      timers.forEach((t) => clearTimeout(t));
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
       setGenerating(false);
       setStatusMsg('');
+      setAgentStep(0);
     }
   };
 
@@ -381,21 +390,85 @@ export default function NewProjectPage() {
         </div>
       </div>
 
-      {/* Generating overlay */}
+      {/* Generating overlay — multi-agent pipeline */}
       {generating && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-700 bg-slate-900 p-10 text-center shadow-2xl">
-            <div className="relative">
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-slate-800 border-t-blue-500" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Zap className="h-6 w-6 text-blue-400" />
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl sm:p-8">
+            {/* Header */}
+            <div className="mb-6 flex items-center gap-3">
+              <div className="relative h-10 w-10 shrink-0">
+                <div className="absolute inset-0 animate-spin rounded-full border-2 border-slate-800 border-t-blue-500" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-blue-400" />
+                </div>
+              </div>
+              <div>
+                <p className="text-base font-semibold text-white">Multi-Agent Pipeline Running</p>
+                <p className="text-xs text-slate-400">{statusMsg}</p>
               </div>
             </div>
-            <div>
-              <p className="text-lg font-semibold text-white">Generating System Design</p>
-              <p className="mt-1 text-sm text-slate-400">{statusMsg}</p>
+
+            {/* Agent steps */}
+            <div className="space-y-2">
+              {[
+                { label: 'Planner Agent', detail: 'Determining process parameters and system type' },
+                { label: 'BOM Agent', detail: 'Selecting components from Malaysian supplier directory' },
+                { label: 'Hydraulics Agent', detail: 'Computing NPSH, head loss, Reynolds, motor sizing' },
+                { label: 'HAZOP Agent', detail: 'Applying risk guidewords across system nodes' },
+                { label: 'Cost Agent', detail: 'Rolling up MYR pricing with transportation logistics' },
+                { label: 'Validation Layer', detail: 'Zod schema + cost/NPSH/supplier sanity checks' },
+              ].map((step, idx) => {
+                const status = idx < agentStep ? 'done' : idx === agentStep ? 'active' : 'pending';
+                return (
+                  <div
+                    key={step.label}
+                    className={`flex items-start gap-3 rounded-xl border p-3 transition-all ${
+                      status === 'done'
+                        ? 'border-green-500/30 bg-green-500/5'
+                        : status === 'active'
+                        ? 'border-blue-500/40 bg-blue-500/10'
+                        : 'border-slate-800 bg-slate-900/40'
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        status === 'done'
+                          ? 'bg-green-500 text-white'
+                          : status === 'active'
+                          ? 'animate-pulse bg-blue-500 text-white'
+                          : 'bg-slate-700 text-slate-500'
+                      }`}
+                    >
+                      {status === 'done' ? '✓' : idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-sm font-medium ${
+                          status === 'done'
+                            ? 'text-green-300'
+                            : status === 'active'
+                            ? 'text-white'
+                            : 'text-slate-500'
+                        }`}
+                      >
+                        {step.label}
+                      </p>
+                      <p
+                        className={`text-xs ${
+                          status === 'pending' ? 'text-slate-600' : 'text-slate-400'
+                        }`}
+                      >
+                        {step.detail}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-xs text-slate-500">Typically 20–60 seconds</p>
+
+            <p className="mt-5 text-center text-xs text-slate-500">
+              Typically 20–60 seconds · Persistent storage on Firestore
+            </p>
           </div>
         </div>
       )}

@@ -1,12 +1,10 @@
-import Link from 'next/link';
+import { HeroCTAs, BottomCTA } from '@/components/HomeCTAs';
 import {
-  ArrowRight,
   Package,
   ShieldAlert,
   Wrench,
   DollarSign,
   CheckCircle2,
-  ChevronRight,
   Droplets,
   MapPin,
   FileDown,
@@ -275,22 +273,7 @@ export default function LandingPage() {
               No credit card required.
             </p>
 
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/signup"
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-500 hover:shadow-blue-500/30"
-              >
-                Get Started Free
-                <ArrowRight className="h-5 w-5" />
-              </Link>
-              <Link
-                href="/login"
-                className="flex items-center gap-2 rounded-xl border border-slate-700 px-8 py-4 text-lg font-medium text-slate-300 transition-all hover:border-slate-500 hover:text-white"
-              >
-                Sign In
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
+            <HeroCTAs />
 
             <div className="mt-12 flex flex-wrap justify-center gap-8 text-center">
               {[
@@ -653,17 +636,7 @@ export default function LandingPage() {
             No credit card. No setup. Describe your project and get a full
             engineering specification in under 4 minutes.
           </p>
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-blue-600/25 transition-all hover:bg-blue-500"
-          >
-            Get Started Free
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-          <p className="mt-4 text-sm text-slate-500">
-            Already have an account?{' '}
-            <Link href="/login" className="text-blue-400 hover:underline">Sign in</Link>
-          </p>
+          <BottomCTA />
         </div>
       </section>
 

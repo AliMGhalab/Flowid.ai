@@ -579,17 +579,57 @@ function parseAIResponse(content: string): Record<string, unknown> {
 
 // ─── Response validation ──────────────────────────────────────────────────────
 
-function validateRecommendation(rec: Record<string, unknown>): void {
-  const result = RecommendationSchema.safeParse(rec);
+// Strip malformed entries from arrays before Zod validation.
+// JSON truncation often leaves the last 1-3 components as strings or partial objects.
+// We drop those silently rather than fail the whole report.
+function cleanRecommendation(rec: Record<string, unknown>): Record<string, unknown> {
+  const cleaned = { ...rec };
+
+  // Components: keep only objects with a name field
+  if (Array.isArray(cleaned.components)) {
+    const arr = cleaned.components as unknown[];
+    const before = arr.length;
+    const filtered = arr.filter(
+      (c) => typeof c === 'object' && c !== null && typeof (c as { name?: unknown }).name === 'string' && ((c as { name: string }).name).trim().length > 0,
+    );
+    cleaned.components = filtered;
+    const dropped = before - filtered.length;
+    if (dropped > 0) console.warn(`[cleanup] dropped ${dropped} malformed component(s)`);
+  }
+
+  // Risks: keep only objects with a hazard field
+  const ra = cleaned.risk_assessment as { risks?: unknown[] } | undefined;
+  if (ra && Array.isArray(ra.risks)) {
+    const before = ra.risks.length;
+    ra.risks = ra.risks.filter(
+      (r) => typeof r === 'object' && r !== null && typeof (r as { hazard?: unknown }).hazard === 'string',
+    );
+    const dropped = before - ra.risks.length;
+    if (dropped > 0) console.warn(`[cleanup] dropped ${dropped} malformed risk(s)`);
+  }
+
+  // Instrumentation: keep only objects with a tag
+  if (Array.isArray(cleaned.instrumentation)) {
+    cleaned.instrumentation = cleaned.instrumentation.filter(
+      (i) => typeof i === 'object' && i !== null && typeof (i as { tag?: unknown }).tag === 'string',
+    );
+  }
+
+  return cleaned;
+}
+
+function validateRecommendation(rec: Record<string, unknown>): Record<string, unknown> {
+  const cleaned = cleanRecommendation(rec);
+  const result = RecommendationSchema.safeParse(cleaned);
   if (!result.success) {
-    // Log ALL issues to Vercel so we can see exactly what the AI got wrong
     const allIssues = result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
-    console.error(`[validation] ${allIssues.length} schema issues:`);
+    console.error(`[validation] ${allIssues.length} schema issues (after cleanup):`);
     allIssues.forEach((m) => console.error(`  - ${m}`));
-    // User-facing message: first 3 only
     const issues = allIssues.slice(0, 3).join('; ');
     throw new Error(`AI response failed schema validation — ${issues}`);
   }
+  // Return the cleaned object so the caller uses the trimmed version
+  return cleaned;
 }
 
 // ─── Model roster — tried in order until one succeeds ────────────────────────
@@ -681,8 +721,8 @@ async function generateWithModel(
     if (!content) throw new Error('Empty response from AI model');
 
     const recommendation = parseAIResponse(content);
-    validateRecommendation(recommendation);
-    return recommendation;
+    const cleaned = validateRecommendation(recommendation);
+    return cleaned;
   } catch (err) {
     const elapsed = Date.now() - startedAt;
     if (controller.signal.aborted) {

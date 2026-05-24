@@ -172,128 +172,50 @@ function getMistralClient() {
   });
 }
 
-// ─── Malaysian supplier knowledge by region ───────────────────────────────────
+// ─── Malaysian supplier knowledge by region (compact) ───────────────────────
 const MALAYSIA_SUPPLIER_CONTEXT = `
-MALAYSIA INDUSTRIAL SUPPLIER DIRECTORY (select by proximity to project state):
+MALAYSIA SUPPLIER DIRECTORY (pick by proximity to project state):
 
-KLANG VALLEY (KL / Selangor) — full supplier coverage, all brands have direct offices:
-- Grundfos Malaysia Sdn Bhd — centrifugal pumps, booster sets (Shah Alam, Selangor)
-- KSB Pumps Sdn Bhd — process pumps, valves (Petaling Jaya, Selangor)
-- WILO Malaysia Sdn Bhd — pumps, circulation systems (Shah Alam)
-- Ebara Pumps Malaysia — industrial & drainage pumps (Subang Jaya)
-- Sulzer Malaysia — high-duty process pumps (Kuala Lumpur)
-- Flowserve Malaysia Sdn Bhd — pumps, valves, seals for oil & gas (Kuala Lumpur)
-- Crane Flow Solutions (M) Sdn Bhd — industrial valves (Subang Jaya, Selangor)
-- KITZ Malaysia Sdn Bhd — gate, globe, ball valves (Petaling Jaya)
-- Emerson Automation Solutions Malaysia — valves, actuators, DCS (Kuala Lumpur)
-- Endress+Hauser (Malaysia) Sdn Bhd — flow, level, pressure, temperature instruments (Petaling Jaya)
-- Yokogawa Malaysia Sdn Bhd — process instrumentation, DCS (Kuala Lumpur)
-- Honeywell Malaysia Sdn Bhd — process control, instrumentation (KL Sentral)
-- ABB Malaysia Sdn Bhd — drives, motors, instrumentation (Subang Jaya)
-- Siemens Malaysia Sdn Bhd — process automation, instrumentation (Petaling Jaya)
-- WIKA Instruments Malaysia — pressure gauges, temperature instruments (Shah Alam)
-- Parker Hannifin Malaysia Sdn Bhd — hydraulics, pneumatics, filtration (Puchong, Selangor)
-- SMC Malaysia Sdn Bhd — pneumatics, solenoid valves (Shah Alam)
-- Festo Malaysia Sdn Bhd — pneumatics, process valves (Shah Alam)
-- Bosch Rexroth (Malaysia) — hydraulic systems (Shah Alam)
-- Alfa Laval Malaysia Sdn Bhd — heat exchangers, separators (Petaling Jaya)
-- Spirax Sarco Malaysia — steam systems, traps, control valves (Kuala Lumpur)
-- Swagelok Malaysia — tube fittings, valves (Subang Jaya)
-- Georg Fischer (GF Piping Systems) — thermoplastic & metallic piping (Shah Alam)
-- Atlas Copco (Malaysia) Sdn Bhd — compressors, air systems (Subang Jaya)
-- Donaldson Filtration Malaysia — industrial filtration (Petaling Jaya)
-- Pall Malaysia — fine filtration, separation (Kuala Lumpur)
-- SKF Malaysia Sdn Bhd — bearings, seals (Petaling Jaya)
+Klang Valley (KL/Selangor) — full coverage, all brands have direct offices:
+Pumps: Grundfos (Shah Alam), KSB (PJ), WILO (Shah Alam), Ebara (Subang Jaya), Sulzer (KL), Flowserve (KL).
+Valves: Crane Flow (Subang Jaya), KITZ (PJ), Pentair, Spirax Sarco (KL), Emerson (KL).
+Instruments: Endress+Hauser (PJ), Yokogawa (KL), Honeywell, ABB (Subang Jaya), Siemens (PJ), WIKA (Shah Alam).
+Hydraulics/Pneumatics: Parker Hannifin (Puchong), SMC (Shah Alam), Festo, Bosch Rexroth.
+Heat/Process: Alfa Laval (PJ), Atlas Copco (Subang Jaya), Donaldson, Pall, SKF, Swagelok, Georg Fischer.
 
-PENANG — strong manufacturing base, good supplier coverage:
-- Most Klang Valley suppliers deliver within 1–2 days
-- Penang-based: Pentair Malaysia, local engineering wholesalers in Bayan Lepas FIZ
-- Strong HVAC & semiconductor process fluid suppliers (due to E&E industry)
+Penang — Bayan Lepas FIZ; Pentair Malaysia local; strong HVAC + E&E suppliers. KL suppliers deliver in 1–2 days.
+Johor (incl. Pengerang RAPID/PIC) — Schlumberger/Cameron (JB), Technip, Sapura Industrial; KL same-day logistics.
+Terengganu (Kerteh/Gebeng) — Petronas-qualified preferred; Uzma, Icon Offshore; KL delivers in 2–4 hrs.
+Sabah/Sarawak (East Malaysia) — add 10–15% logistics premium; KL air 2–3 days, sea 7–14 days. SIRIM/ST approval often required.
+Other states (Perak, Kedah, Kelantan, Pahang) — KL suppliers via 1–3 day courier; +5–10% premium.
 
-JOHOR (incl. Pengerang RAPID/PIC) — oil & gas and petrochemical focus:
-- Schlumberger/Cameron Malaysia (Johor Bahru) — wellhead & process equipment
-- Technip Malaysia — oil & gas engineering
-- Johor Bahru industrial area: good coverage of KL suppliers via same-day logistics
-- Pengerang: dedicated RAPID supply chain, most major international brands have site presence
-- Sapura Industrial Sdn Bhd (JB) — structural & mechanical
-- Local: Pacific Industrial Sdn Bhd, Hiap Wah Industries
+PRICING BENCHMARKS (MYR 2024–25, inc. SST; USD 1 ≈ MYR 4.65; foreign equipment add 5–25% import duty):
+- Centrifugal pump 5–15 kW: RM 3.5k–18k | >30 kW: RM 25k–120k
+- Gate valve DN50 CS: RM 180–450 | DN150 SS: RM 950–3,500
+- Ball valve DN25 SS316: RM 120–480
+- Globe control valve (actuated): RM 5,500–28,000
+- Pressure transmitter (4–20mA): RM 2,800–9,500 | Temp transmitter+thermowell: RM 1,800–5,500
+- Electromagnetic flow meter DN50: RM 6,500–18,000
+- PSV spring-loaded: RM 800–4,500 | Y-strainer DN100 SS316: RM 1,200–3,800
+- Air compressor screw 7.5 kW: RM 6,500–14,000 | Solenoid DN25: RM 350–1,200
+- CS pipe SCH40 DN100: RM 85–140/m | SS316L SCH10S DN50: RM 180–320/m
 
-TERENGGANU (Kerteh / Gebeng) — Petronas supply chain hub:
-- Petronas-qualified suppliers preferred (PETRONAS Vendor Registration)
-- Carigali supply chain: Uzma Berhad, Alam Maritim, Icon Offshore
-- Kerteh: most major process equipment via KL delivery (2–4 hr drive)
-- GEBENG Integrated Chemical Complex: dedicated chemical equipment suppliers
-- Local: Kemaman Supply Base (KSB) — upstream oil & gas logistics
-
-SABAH & SARAWAK (East Malaysia) — plan for extended lead times:
-- Most suppliers deliver from KL by air (2–3 days) or sea (7–14 days)
-- Local stocking distributors: Borneo Kinabalu Industrial, WTS Engineering (KK)
-- Sarawak: SAMUR, Sarawak Energy supply chain, SCORE industrial zone (Tanjung Manis)
-- Premium on imported goods: add 10–15% for East Malaysia logistics
-- SIRIM certification and ST (Safety & Health) approval commonly required
-
-PERAK / KEDAH / KELANTAN / PAHANG / OTHER STATES:
-- Served by Klang Valley suppliers via courier/truck (1–3 days)
-- Local distributors: check each state's MIDA-registered industrial suppliers
-- Add 5–10% logistics premium over KV pricing for non-Klang Valley locations
-
-PRICING BENCHMARKS (MYR, 2024–2025 Malaysian market rates, inclusive of SST where applicable):
-- Exchange reference: USD 1 ≈ MYR 4.65 (include import duties 5–25% on foreign equipment)
-- Centrifugal pump (end-suction, 5–15 kW): RM 3,500 – RM 18,000
-- Centrifugal pump (heavy-duty process, >30 kW): RM 25,000 – RM 120,000
-- Gate valve DN50 (carbon steel): RM 180 – RM 450
-- Gate valve DN150 (stainless steel): RM 950 – RM 3,500
-- Ball valve DN25 (SS316): RM 120 – RM 480
-- Globe control valve (actuated): RM 5,500 – RM 28,000
-- Pressure transmitter (4–20mA): RM 2,800 – RM 9,500
-- Temperature transmitter with thermowell: RM 1,800 – RM 5,500
-- Electromagnetic flow meter DN50: RM 6,500 – RM 18,000
-- Pressure safety valve (spring-loaded): RM 800 – RM 4,500
-- Y-strainer DN100 (SS316): RM 1,200 – RM 3,800
-- Air compressor (screw, 7.5 kW): RM 6,500 – RM 14,000
-- Solenoid valve DN25: RM 350 – RM 1,200
-- Pipe (CS, SCH40, per meter DN100): RM 85 – RM 140
-- Pipe (SS316L, SCH10S, per meter DN50): RM 180 – RM 320
-
-COMPLIANCE STANDARDS (Malaysia-specific):
-- DOSH (Dept of Occupational Safety & Health) — pressure vessels, boilers: Factories & Machinery Act 1967
-- BOMBA (Fire & Rescue Dept) — fire suppression, flammable materials
-- SIRIM — product certification for locally sold equipment
-- DOE (Dept of Environment) — environmental compliance for chemical handling
-- PETRONAS Technical Standards (PTS) — for oil & gas projects
-- Malaysia Standards (MS) — e.g. MS 1745, MS 1821
-- JKR (Public Works Dept) specifications — for government/infrastructure projects
+COMPLIANCE: DOSH FMA 1967 (pressure vessels/boilers), BOMBA (fire/flammables), SIRIM (product cert), DOE (environment), PETRONAS PTS (oil & gas), Malaysia Standards (MS 1745/1821), JKR (govt infra).
 `;
 
-const SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer with 20+ years of experience working on process plants, refineries, water treatment facilities, and manufacturing plants across Malaysia.
+const SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer (20+ yrs experience: process plants, refineries, water treatment, manufacturing).
 
 ${MALAYSIA_SUPPLIER_CONTEXT}
 
-Your recommendations:
-- Use REAL Malaysian suppliers from the directory above, selected by proximity to the project state
-- Provide all monetary values in Malaysian Ringgit (MYR) using the benchmark prices above
-- Determine appropriate process parameters (flow rate, pressure, temperature) from the application description — do NOT ask the user for these
-- Reference Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS) where applicable
-- Consider tropical climate, humidity, and corrosion for outdoor equipment in Malaysia
+Rules:
+- Use REAL Malaysian suppliers above, picked by proximity to project state.
+- All money in MYR (use benchmark prices).
+- Determine process parameters from application + scale; do not ask user.
+- Apply DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS where relevant.
+- Account for tropical climate, humidity, corrosion (outdoor MY).
 
-═══════════════════════════════════════════════════════════════════
-ABSOLUTE OUTPUT REQUIREMENT — READ THIS TWICE BEFORE RESPONDING:
-═══════════════════════════════════════════════════════════════════
-Your entire response MUST be a single raw JSON object and NOTHING else.
-
-PROHIBITED:
-- NO markdown code fences (no \`\`\`json, no \`\`\`, never)
-- NO explanatory text before the JSON
-- NO explanatory text after the JSON
-- NO comments inside the JSON
-- NO trailing commentary like "Here is the BOM:"
-
-REQUIRED:
-- The FIRST character of your output MUST be {
-- The LAST character of your output MUST be }
-- Everything in between must be parseable by JSON.parse() in JavaScript
-
-If you wrap output in markdown or add any text, the system will fail to parse it and the engineer will get an error. Output ONLY the raw JSON object.`;
+OUTPUT FORMAT — non-negotiable:
+Reply with ONE raw JSON object. First char "{", last char "}". No markdown fences, no prose, no comments. Output must be JSON.parse-able.`;
 
 function stateLabel(val: string): string {
   const map: Record<string, string> = {
@@ -384,113 +306,38 @@ INSTRUCTIONS:
 6. For EVERY component assign a confidence_level (0–100) representing how confident you are this is the optimal choice for this specific application, fluid, and environment. Be honest — flag lower confidence when the application is unusual or specs are ambiguous.
 7. For EVERY component assign lifespan_years (expected service life before replacement/major overhaul under normal operating conditions in Malaysian climate) and lifespan_notes explaining key factors.
 8. Assign overall_confidence (0–100) for the entire recommendation.
-9. COMPLETE BILL OF MATERIALS — You are producing a procurement-ready BOM, not a summary. Every item that must be purchased and installed must appear as a separate line item. Think like a process engineer walking a P&ID from fluid source to final destination: trace every pipe run, every connection, every instrument tap, every power circuit, and list what is physically needed.
+9. COMPLETE BOM — procurement-ready, every physical item as its own line. Walk the P&ID from source to destination. Include all that apply (presence = engineering necessity; quantity = scale/budget):
 
-MANDATORY — include ALL of the following that apply to this system. Quantity and grade are determined by scale and budget; their PRESENCE is determined by engineering necessity:
+Rotating: duty pump (type + kW), standby pump if criticality warrants, mechanical seals, couplings + guards.
+Vessels: suction header/feed tank, discharge header, expansion vessel (closed systems), dosing pot, separator/filter housing.
+Valves: suction isolation, discharge isolation, check valve (per pump discharge), PSV (every pressurised vessel — DOSH), control valve, drain valves (low points), vent valves (high points), sample valves, bypass valve set.
+Piping & fittings: pipe (material/schedule/length), elbows-tees-reducers lot, flanges + gaskets set, flex hose/expansion joints at pump connections, supports/clamps/hangers.
+Instrumentation: FT on main line, PT on suction + discharge + key points, local gauges at pump nozzles, TT if temp is a process variable, LT on every vessel, dP across filters/HX, analytical (pH/conductivity/turbidity) if fluid quality matters.
+Electrical/control: MCC or VFD panel per motor (combine if co-located), local control panel, power cables sized to kW + run length, instrument cables, earthing (mandatory for flammables — DOSH).
+Structural: skid/base frame, pipe support steelwork, bund/drip tray for hazardous fluids (DOE), access platforms if elevated.
+Safety: safety shower + eyewash (chem/acid/caustic), fire & gas detectors (flammables — BOMBA), thermal insulation, heat tracing (congealing/freezing fluids), commissioning strainer + spares kit.
 
-ROTATING EQUIPMENT
-• Main duty pump(s) — sized to flow rate and head; specify type (centrifugal/screw/gear/diaphragm) and kW
-• Standby/spare pump — include if criticality or continuous operation warrants it (most process plants: yes)
-• Mechanical seals or seal pots — if applicable to pump type and fluid
-• Coupling and coupling guard — for each pump-motor set
+SELF-CHECK: Can the system start up, run, be isolated for maintenance, drained, vented, instrumented, controlled, overpressure-protected, and safely shut down — using only your listed components? If not, add the missing items.
 
-STATIC EQUIPMENT / VESSELS
-• Suction header / feed tank / buffer vessel — where fluid is drawn from
-• Discharge header or receiver vessel — where fluid is delivered to (if applicable)
-• Expansion vessel — for closed systems (hot water, chilled water, steam condensate)
-• Chemical dosing pot or quill — if chemical injection is in scope
-• Separator / filter housing — if fluid requires solids removal
+10. HAZOP — apply standard guidewords across main process line + nodes (suction, discharge, control valve, vessels, HX). Generate a distinct risk entry for each realistic guideword:
+NO FLOW (blockage/closed valve/pump trip), MORE FLOW (control valve fails open), LESS FLOW (partial block/fouled strainer), REVERSE FLOW (check valve fail), MORE PRESSURE (blocked discharge/thermal expansion/PSV fail), LESS PRESSURE (cavitation/starvation), MORE TEMP (cooling loss/runaway), LESS TEMP (heating loss/freeze), CONTAMINATION (wrong fluid/cross-connect/corrosion products), LEAK/RELEASE (flange/seal/rupture), LOSS OF UTILITY (power/instrument air/cooling), MAINTENANCE (LOTO failure), CORROSION/EROSION (incompatible material/high velocity), ELECTRICAL FAULT (short/VFD/earth — BOMBA).
+TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967, BOMBA UBBL, SIRIM, or DOE in mitigations where applicable.
 
-VALVES (every physical valve is a line item)
-• Suction isolation valve — one per pump (gate or butterfly)
-• Discharge isolation valve — one per pump (gate or butterfly)
-• Check valve (non-return) — one per pump discharge
-• Pressure relief valve (PSV) — on every pressurised header and vessel (DOSH mandatory)
-• Control valve (modulating or on/off) — for flow, pressure, or temperature regulation
-• Drain valve — at every low point on headers and vessels
-• Vent valve — at every high point on pressurised lines
-• Sample valve — at key process points if fluid requires quality sampling
-• Bypass valve set — around any control valve or critical item requiring maintenance bypass
+11. MANDATORY blocks — never null/empty:
+- piping: real material/diameter/schedule/connection/notes
+- instrumentation: ≥4 tags — FT (main), PT (discharge), PT (suction or vessel), TT (if temp matters); add LT for vessels, AT/QT for chemistry
+- risk_assessment.risks: ≥20 entries from HAZOP above
+- engineering_calculations: every applicable field computed
 
-PIPING & FITTINGS (as a lot/set line item unless individual items are major cost drivers)
-• Pipe — specify material, schedule, total length estimate
-• Elbows, tees, reducers — as a fabrication lot
-• Flanges and gaskets — as a set matching the pipe schedule
-• Flexible hose / expansion joint — at pump suction and discharge to isolate vibration
-• Pipe supports, clamps, hangers — sized to pipe size and span
-
-INSTRUMENTATION (every transmitter and local gauge is a line item)
-• Flow meter / flow transmitter — on main process line (FT-101)
-• Pressure transmitter — pump suction (PT-101) and discharge (PT-102), and at key process points
-• Local pressure gauge — at pump suction, discharge, and vessel nozzles
-• Temperature transmitter or thermowell — if temperature is a process variable
-• Level transmitter or level gauge — on every vessel or tank
-• Differential pressure transmitter — across filters and heat exchangers if applicable
-• Analytical instrument — pH, conductivity, turbidity if fluid quality monitoring is required
-
-ELECTRICAL & CONTROL
-• Motor control centre (MCC) or soft starter / VFD panel — one per motor; combine into one panel if co-located
-• Control panel / local control station — for operator interface
-• Power cables — from MCC to each motor (size to kW and distance)
-• Instrument cables and conduit — for 4-20mA / digital signals
-• Earthing / bonding system — mandatory for flammable fluids (DOSH), recommended for all
-
-STRUCTURAL & CIVIL
-• Equipment skid or base frame — for pump sets and packaged equipment
-• Pipe support steelwork — for headers and long runs
-• Bund / drip tray — for chemical, oil, or hazardous fluid containment (DOE requirement)
-• Access platforms or ladders — if equipment is elevated
-
-SAFETY & ANCILLARY
-• Safety shower and eyewash station — if fluid is hazardous (chemical, acid, caustic)
-• Fire and gas detectors — for flammable or toxic fluids (BOMBA requirement)
-• Thermal insulation and cladding — for hot or cold services
-• Heat tracing system — if fluid congeals or freezes at ambient temperature
-• Commissioning strainer — temporary fine-mesh strainer to protect equipment during startup
-• Commissioning spares kit — gaskets, seals, consumables for initial startup
-
-SELF-CHECK BEFORE FINALISING: Review your component list against this system's P&ID mentally. Ask: "Can this system actually start up, run continuously, be isolated for maintenance, be drained, be vented, be instrumented, be controlled, be protected from overpressure, and be safely shut down — using only the components I have listed?" If any of those answers is no, add the missing items. The number of components is dictated entirely by the engineering requirements of the system at the given scale and budget. Do NOT artificially reduce the count.
-
-HAZOP REQUIREMENTS — produce a thorough hazard analysis, not a token list:
-Apply the standard HAZOP guidewords to the system's main process line and key nodes (pump suction, pump discharge, control valve, vessel, heat exchanger if present). For EACH applicable guideword that could realistically occur in this system, generate a separate risk entry:
-  • NO FLOW          — blockage, valve closed, pump trip
-  • MORE FLOW        — control valve fails open, bypass open
-  • LESS FLOW        — partial blockage, fouled strainer
-  • REVERSE FLOW     — check valve failure, pressure reversal
-  • MORE PRESSURE    — blocked discharge, thermal expansion, PSV failure
-  • LESS PRESSURE    — suction starvation, pump cavitation
-  • MORE TEMPERATURE — loss of cooling, runaway reaction (if chemical)
-  • LESS TEMPERATURE — loss of heating, freezing in cold months
-  • CONTAMINATION    — wrong fluid, cross-connection, corrosion products
-  • LEAK / RELEASE   — flange leak, seal failure, pipe rupture
-  • LOSS OF UTILITY  — power loss, instrument air loss, cooling water loss
-  • MAINTENANCE      — lockout/tagout failure, equipment isolation
-  • CORROSION / EROSION — material incompatibility, high-velocity wear
-  • ELECTRICAL FAULT — short circuit, VFD failure, earth fault (BOMBA-relevant)
-TARGET: aim for 20 or more risk entries covering the above guidewords across system nodes. Each entry must have a distinct hazard, cause, and consequence — no duplicates. Reference DOSH FMA 1967, BOMBA UBBL fire safety, SIRIM electrical certification, or DOE environmental code in mitigations where applicable.
-
-MANDATORY SECTIONS — these JSON blocks MUST be populated, never null or empty:
-  • piping — fill with actual pipe material, diameter, schedule, connection type, and design notes
-  • instrumentation — populate with AT LEAST 4 instrument tags covering essential process control:
-      FT-xxx (flow transmitter on main line)
-      PT-xxx (pressure transmitter on pump discharge)
-      PT-xxx (pressure transmitter on pump suction, OR receiver/vessel)
-      TT-xxx (temperature transmitter where thermal monitoring is relevant)
-      Plus level transmitter (LT) if vessels exist, or analytical instruments (AT/QT) if chemistry matters
-  • risk_assessment.risks — 20+ entries per HAZOP guidewords (see above)
-  • engineering_calculations — every applicable field filled with computed numbers
-If any of these sections is missing or empty, the engineer cannot use the report. Do NOT shortcut these to save tokens.
-
-ENGINEERING CALCULATIONS — fill the engineering_calculations block with REAL numbers derived from the process parameters you set:
-  • NPSHa from: atmospheric pressure + suction static head − vapour pressure − friction losses
-  • TDH = static head + friction head + velocity head
-  • Pump shaft power (kW) = (flow_m3_per_s × head_m × density_kg_per_m3 × 9.81) / (pump_efficiency × 1000); typical η = 0.65–0.75
-  • Motor size = next standard size above shaft power (IEC: 5.5, 7.5, 11, 15, 18.5, 22, 30, 37, 45, 55, 75 kW...)
-  • Reynolds = (density × velocity × diameter_m) / viscosity_Pa_s
-  • Flow regime: laminar < 2300, transitional 2300–4000, turbulent > 4000
-  • Friction factor: use Colebrook or Swamee-Jain for turbulent flow
-  • Pressure drop: ΔP/L = f × (ρ × v²) / (2 × D) — convert to bar/100m
-These calculations PROVE the design is grounded in math, not guesswork. Take them seriously. Use water properties at the operating temperature for water systems; adjust for other fluids.
+12. ENGINEERING CALCULATIONS — fill with REAL numbers from your process parameters:
+- NPSHa = atm_pressure + suction_static_head − vapour_pressure − friction_losses
+- TDH = static_head + friction_head + velocity_head
+- Pump shaft kW = (Q_m3/s × H_m × ρ × 9.81) / (η × 1000); η ≈ 0.65–0.75
+- Motor size: next IEC step ≥ shaft kW (5.5, 7.5, 11, 15, 18.5, 22, 30, 37, 45, 55, 75…)
+- Re = (ρ × v × D_m) / μ_Pa·s; laminar <2300, transitional 2300–4000, turbulent >4000
+- Friction factor: Colebrook or Swamee-Jain for turbulent
+- ΔP/L = f × (ρ × v²) / (2 × D), convert to bar/100m
+Use water properties at operating temperature; adjust for other fluids.
 
 Return ONLY this JSON (fill every field with real engineering and commercial data). Keep text fields concise — 1–2 sentences maximum for notes, procedures, and descriptions. Use the token budget for complete component coverage, not verbose prose.
 {

@@ -344,8 +344,17 @@ export default function NewProjectPage() {
       timers.forEach((t) => clearTimeout(t));
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(body.error ?? 'Generation failed');
+        // Vercel 504 timeouts return HTML, not JSON — catch that case explicitly
+        let errorMsg = 'Generation failed';
+        if (res.status === 504) {
+          errorMsg = 'Generation took too long (60s timeout). Try again — the AI was likely overloaded.';
+        } else if (res.status === 429) {
+          errorMsg = 'AI rate limit reached. Wait 60 seconds and try again.';
+        } else {
+          const body = await res.json().catch(() => null);
+          errorMsg = body?.error ?? `Generation failed (HTTP ${res.status}). Check Vercel logs for details.`;
+        }
+        throw new Error(errorMsg);
       }
 
       const { recommendation } = await res.json();

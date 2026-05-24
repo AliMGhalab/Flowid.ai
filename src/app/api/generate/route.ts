@@ -602,13 +602,13 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras Qwen 235B — primary (fast inference hardware, must complete < 30s)
+  // Cerebras Qwen 235B — primary (fast inference; aim for < 25s completion)
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 16000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 12000 });
   }
-  // Mistral Medium — fallback (faster than Large; still capable; native JSON mode)
+  // Mistral Medium — fallback (different vendor, native JSON mode)
   if (process.env.MISTRAL_API_KEY) {
-    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
+    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 8000 });
   }
 
   return roster;

@@ -164,6 +164,14 @@ function getCerebrasClient() {
   });
 }
 
+function getMistralClient() {
+  return new OpenAI({
+    apiKey: process.env.MISTRAL_API_KEY!,
+    baseURL: 'https://api.mistral.ai/v1',
+    maxRetries: 0,
+  });
+}
+
 // ─── Malaysian supplier knowledge by region ───────────────────────────────────
 const MALAYSIA_SUPPLIER_CONTEXT = `
 MALAYSIA INDUSTRIAL SUPPLIER DIRECTORY (select by proximity to project state):
@@ -739,7 +747,7 @@ function validateRecommendation(rec: Record<string, unknown>): void {
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'cerebras';
+  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral';
   model: string;
   max_tokens: number;
 }
@@ -747,9 +755,13 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras Qwen 235B — fast, large, returns clean JSON
+  // Cerebras Qwen 235B — primary (fast, large output capacity, proven)
   if (process.env.CEREBRAS_API_KEY) {
     roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 24000 });
+  }
+  // Mistral Large — fallback (different vendor, stable, native JSON mode)
+  if (process.env.MISTRAL_API_KEY) {
+    roster.push({ provider: 'mistral', model: 'mistral-large-latest', max_tokens: 16000 });
   }
 
   return roster;
@@ -758,6 +770,7 @@ function buildModelRoster(): ModelConfig[] {
 function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'chutes') return getChutesClient();
   if (cfg.provider === 'cerebras') return getCerebrasClient();
+  if (cfg.provider === 'mistral') return getMistralClient();
   return getGeminiClient();
 }
 

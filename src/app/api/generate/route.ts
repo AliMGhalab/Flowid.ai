@@ -755,13 +755,13 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras Qwen 235B — primary (fast, large output capacity, proven)
+  // Cerebras Qwen 235B — primary (fast inference hardware, must complete < 30s)
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 24000 });
+    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 16000 });
   }
-  // Mistral Large — fallback (different vendor, stable, native JSON mode)
+  // Mistral Medium — fallback (faster than Large; still capable; native JSON mode)
   if (process.env.MISTRAL_API_KEY) {
-    roster.push({ provider: 'mistral', model: 'mistral-large-latest', max_tokens: 16000 });
+    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
   }
 
   return roster;
@@ -844,18 +844,10 @@ export async function POST(request: NextRequest) {
           console.warn(`[/api/generate] rate-limited on ${cfg.model}, trying next model`);
           continue; // try next model
         }
-        // JSON / validation error — retry once with same model before moving on
-        console.warn(`[/api/generate] parse error on ${cfg.model}, retrying once`);
-        try {
-          const recommendation = await generateWithModel(input, cfg);
-          return NextResponse.json({ recommendation });
-        } catch (retryErr) {
-          lastError = retryErr;
-          if (isRateLimitError(retryErr)) continue; // rate limited on retry, try next model
-          // Non-rate-limit failure — try next model anyway
-          console.warn(`[/api/generate] retry also failed on ${cfg.model}, trying next model`);
-          continue;
-        }
+        // JSON / validation error — skip to next provider immediately
+        // (retrying the same model takes too long and risks Vercel function timeout)
+        console.warn(`[/api/generate] parse/validation error on ${cfg.model}, trying next provider`);
+        continue;
       }
     }
 

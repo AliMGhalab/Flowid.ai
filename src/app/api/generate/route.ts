@@ -9,61 +9,65 @@ export const maxDuration = 120;
 // Strict schema enforcement on AI output prevents drift, missing fields, and
 // hallucinated values from reaching the user. Failed validation triggers retry.
 
+// Lowercased-string coercion — AI sometimes uses "Medium" instead of "medium"
+const lowerEnum = <T extends string>(values: readonly [T, ...T[]]) =>
+  z.string().transform((s) => s.toLowerCase().trim() as T).pipe(z.enum(values));
+
 const RiskSchema = z.object({
-  id: z.string(),
-  category: z.string(),
-  hazard: z.string(),
-  cause: z.string(),
-  consequence: z.string(),
-  likelihood: z.enum(['low', 'medium', 'high']),
-  severity: z.enum(['low', 'medium', 'high', 'critical']),
-  risk_level: z.enum(['low', 'medium', 'high', 'critical']),
-  safeguard: z.string(),
-  mitigation: z.string(),
-});
+  id: z.string().optional().default(''),
+  category: z.string().optional().default('operational'),
+  hazard: z.string().min(1),
+  cause: z.string().optional().default(''),
+  consequence: z.string().optional().default(''),
+  likelihood: lowerEnum(['low', 'medium', 'high']).optional().default('medium'),
+  severity: lowerEnum(['low', 'medium', 'high', 'critical']).optional().default('medium'),
+  risk_level: lowerEnum(['low', 'medium', 'high', 'critical']).optional().default('medium'),
+  safeguard: z.string().optional().default(''),
+  mitigation: z.string().optional().default(''),
+}).passthrough();
 
 const ComponentSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  category: z.string(),
-  quantity: z.number().nonnegative(),
-  specification: z.string(),
-  material: z.string(),
-  supplier: z.string(),
-  model: z.string(),
-  unit_cost_myr: z.number().nonnegative().optional(),
-  total_cost_myr: z.number().nonnegative().optional(),
+  id: z.string().optional().default(''),
+  name: z.string().min(1),
+  category: z.string().optional().default('other'),
+  quantity: z.coerce.number().nonnegative().default(1),
+  specification: z.string().optional().default(''),
+  material: z.string().optional().default(''),
+  supplier: z.string().optional().default(''),
+  model: z.string().optional().default(''),
+  unit_cost_myr: z.coerce.number().nonnegative().optional(),
+  total_cost_myr: z.coerce.number().nonnegative().optional(),
   notes: z.string().optional().default(''),
-  confidence_level: z.number().min(0).max(100).optional(),
-  lifespan_years: z.number().positive().optional(),
+  confidence_level: z.coerce.number().min(0).max(100).optional(),
+  lifespan_years: z.coerce.number().positive().optional(),
   lifespan_notes: z.string().optional(),
   price_basis: z.string().optional(),
   alternatives: z.array(z.any()).optional(),
-});
+}).passthrough();
 
 const CostEstimateSchema = z.object({
-  equipment_cost_myr: z.number().nonnegative().optional(),
-  installation_cost_myr: z.number().nonnegative().optional(),
-  engineering_cost_myr: z.number().nonnegative().optional(),
-  commissioning_cost_myr: z.number().nonnegative().optional(),
-  transportation_cost_myr: z.number().nonnegative().optional(),
-  total_cost_myr: z.number().nonnegative().optional(),
-  within_budget: z.boolean(),
+  equipment_cost_myr: z.coerce.number().nonnegative().optional(),
+  installation_cost_myr: z.coerce.number().nonnegative().optional(),
+  engineering_cost_myr: z.coerce.number().nonnegative().optional(),
+  commissioning_cost_myr: z.coerce.number().nonnegative().optional(),
+  transportation_cost_myr: z.coerce.number().nonnegative().optional(),
+  total_cost_myr: z.coerce.number().nonnegative().optional(),
+  within_budget: z.coerce.boolean().optional().default(true),
   budget_notes: z.string().optional().default(''),
 }).passthrough();
 
 const RecommendationSchema = z.object({
-  summary: z.string().min(10),
-  system_type: z.string().min(3),
+  summary: z.string().min(1),
+  system_type: z.string().min(1),
   design_basis: z.string().optional().default(''),
   components: z.array(ComponentSchema).min(1, 'BOM must contain at least one component'),
-  cost_estimate: CostEstimateSchema,
+  cost_estimate: CostEstimateSchema.optional().default({ within_budget: true, budget_notes: '' }),
   risk_assessment: z.object({
-    overall_risk_level: z.enum(['low', 'medium', 'high', 'critical']),
+    overall_risk_level: lowerEnum(['low', 'medium', 'high', 'critical']).optional().default('medium'),
     hazop_summary: z.string().optional().default(''),
-    risks: z.array(RiskSchema),
-  }).optional(),
-}).passthrough(); // allow extra fields without failing
+    risks: z.array(RiskSchema).optional().default([]),
+  }).passthrough().optional(),
+}).passthrough();
 
 // ─── Hallucination safeguards — sanity-check the AI output ───────────────────
 // Server-side rules that catch nonsensical AI output BEFORE it reaches the user.
@@ -578,11 +582,12 @@ function parseAIResponse(content: string): Record<string, unknown> {
 function validateRecommendation(rec: Record<string, unknown>): void {
   const result = RecommendationSchema.safeParse(rec);
   if (!result.success) {
-    // Pull out the first 3 issues for a concise error message
-    const issues = result.error.issues.slice(0, 3).map((i) => {
-      const path = i.path.join('.');
-      return `${path}: ${i.message}`;
-    }).join('; ');
+    // Log ALL issues to Vercel so we can see exactly what the AI got wrong
+    const allIssues = result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
+    console.error(`[validation] ${allIssues.length} schema issues:`);
+    allIssues.forEach((m) => console.error(`  - ${m}`));
+    // User-facing message: first 3 only
+    const issues = allIssues.slice(0, 3).join('; ');
     throw new Error(`AI response failed schema validation — ${issues}`);
   }
 }

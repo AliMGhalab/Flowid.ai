@@ -612,6 +612,79 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Meet the Team ─────────────────────────────────────────────────── */}
+      <section className="border-t border-slate-800 bg-slate-900/20">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">Meet the Team</h2>
+            <p className="mx-auto max-w-xl text-slate-400">
+              Built in Malaysia by engineers who&apos;ve seen first-hand how long fluid system
+              specification really takes — and what it costs.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Ali */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 transition-colors hover:border-slate-700">
+              <div className="mb-4 flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-2xl font-bold text-blue-400">
+                  AG
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-white">Ali Ghalab</h3>
+                  <p className="text-sm text-blue-400">Mechatronics Engineer</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <a
+                  href="mailto:alimohamedrefai@gmail.com"
+                  className="flex items-center gap-2 text-slate-400 hover:text-white"
+                >
+                  <span className="text-slate-600">✉</span>
+                  <span className="truncate">alimohamedrefai@gmail.com</span>
+                </a>
+                <a
+                  href="tel:+60173356536"
+                  className="flex items-center gap-2 text-slate-400 hover:text-white"
+                >
+                  <span className="text-slate-600">✆</span>
+                  <span>+60 17-335 6536</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Amr */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 transition-colors hover:border-slate-700">
+              <div className="mb-4 flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-2xl font-bold text-blue-400">
+                  AG
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-white">Amr Ghalab</h3>
+                  <p className="text-sm text-blue-400">Multimedia Technician</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <a
+                  href="mailto:amrmohamedrefai@gmail.com"
+                  className="flex items-center gap-2 text-slate-400 hover:text-white"
+                >
+                  <span className="text-slate-600">✉</span>
+                  <span className="truncate">amrmohamedrefai@gmail.com</span>
+                </a>
+                <a
+                  href="tel:+60199356380"
+                  className="flex items-center gap-2 text-slate-400 hover:text-white"
+                >
+                  <span className="text-slate-600">✆</span>
+                  <span>+60 19-935 6380</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Engineering disclaimer ───────────────────────────────────────────── */}
       <section className="border-t border-slate-800 bg-slate-900/30">
         <div className="mx-auto max-w-4xl px-4 py-10 text-center sm:px-6 lg:px-8">

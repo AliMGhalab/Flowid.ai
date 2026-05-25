@@ -7,11 +7,13 @@ import { useAuth } from '@/components/AuthProvider';
 import { getProject } from '@/lib/firestore';
 import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule, LivePriceResult, ComponentAlternative } from '@/types';
 import { getFluidLabel } from '@/lib/fluidLabels';
+import ProcessFlowDiagram from '@/components/ProcessFlowDiagram';
 import {
   ArrowLeft,
   LayoutDashboard,
   Package,
   GitBranch,
+  Workflow,
   ShieldAlert,
   Wrench,
   DollarSign,
@@ -109,6 +111,7 @@ function RiskBadge({ level }: { level: string }) {
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'flow', label: 'Process Flow', icon: Workflow },
   { id: 'components', label: 'Components', icon: Package },
   { id: 'piping', label: 'Piping & Instrumentation', icon: GitBranch },
   { id: 'risks', label: 'Risk Assessment', icon: ShieldAlert },
@@ -1049,6 +1052,19 @@ export default function ProjectPage() {
       {/* Tab content */}
       <div>
         {activeTab === 'overview' && <OverviewTab project={project} />}
+        {activeTab === 'flow' && (
+          rec.process_flow && rec.process_flow.nodes && rec.process_flow.nodes.length > 0 ? (
+            <ProcessFlowDiagram flow={rec.process_flow} projectName={project.projectName} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 py-16 text-center">
+              <Workflow className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+              <p className="text-slate-300">No process flow data in this project.</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Older projects don&apos;t include the P&amp;ID diagram. Regenerate this project to get one.
+              </p>
+            </div>
+          )
+        )}
         {activeTab === 'components' && <ComponentsTab components={rec.components ?? []} />}
         {activeTab === 'piping' && <PipingTab project={project} />}
         {activeTab === 'risks' && <RisksTab project={project} />}

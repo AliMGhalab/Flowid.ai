@@ -165,6 +165,23 @@ export interface LivePriceResult {
   source_url?: string;
 }
 
+export interface ProcessFlowNode {
+  id: string;            // unique tag, e.g. "T-101", "P-101", "FT-101"
+  label: string;         // human-readable, e.g. "Feed Tank"
+  type: 'vessel' | 'pump' | 'valve' | 'instrument' | 'equipment' | 'fitting' | 'other';
+}
+
+export interface ProcessFlowEdge {
+  from: string;          // node id
+  to: string;            // node id
+  label?: string;        // optional pipe size / fluid label, e.g. "DN100 SS316L"
+}
+
+export interface ProcessFlow {
+  nodes: ProcessFlowNode[];
+  edges: ProcessFlowEdge[];
+}
+
 export interface FluidSystemRecommendation {
   summary: string;
   system_type: string;
@@ -172,6 +189,7 @@ export interface FluidSystemRecommendation {
   overall_confidence?: number;    // 0–100: overall recommendation confidence
   process_parameters: ProcessParameters;
   engineering_calculations?: EngineeringCalculations;
+  process_flow?: ProcessFlow;
   components: SystemComponent[];
   piping: PipingSpec;
   instrumentation: Instrument[];

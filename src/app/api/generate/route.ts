@@ -65,6 +65,18 @@ const CostEstimateSchema = z.object({
   budget_notes: z.string().optional().default(''),
 }).passthrough();
 
+const ProcessFlowNodeSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().optional().default(''),
+  type: z.string().optional().default('other'),
+}).passthrough();
+
+const ProcessFlowEdgeSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  label: z.string().optional(),
+}).passthrough();
+
 const RecommendationSchema = z.object({
   summary: z.string().min(1),
   system_type: z.string().min(1),
@@ -75,6 +87,10 @@ const RecommendationSchema = z.object({
     overall_risk_level: riskLevel4.optional().default('medium'),
     hazop_summary: z.string().optional().default(''),
     risks: z.array(RiskSchema).optional().default([]),
+  }).passthrough().optional(),
+  process_flow: z.object({
+    nodes: z.array(ProcessFlowNodeSchema).optional().default([]),
+    edges: z.array(ProcessFlowEdgeSchema).optional().default([]),
   }).passthrough().optional(),
 }).passthrough();
 
@@ -384,6 +400,20 @@ Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST â
     "heat_load_kw": 175,
     "notes": "Darcy-Weisbach for water at op temp; NPSH margin per API 610; motor sized per IEC 60034"
   },
+  "process_flow": {
+    "_instruction": "MANDATORY: list the major equipment as nodes and the physical pipe connections as edges. This drives a P&ID diagram. Use 8-18 nodes covering: source/tank, pump(s), key valves (check, control, PSV), instruments (FT/PT/TT), heat exchangers, separators, destination/header. Connect them in physical flow order from source to destination. Use IDs like T-101, P-101, CV-101, FT-101 that match component IDs in your BOM where possible.",
+    "nodes": [
+      { "id": "T-101", "label": "Feed Tank", "type": "vessel" },
+      { "id": "P-101", "label": "Pump P-101 (duty)", "type": "pump" },
+      { "id": "CV-101", "label": "Check Valve", "type": "valve" },
+      { "id": "FT-101", "label": "Flow Transmitter", "type": "instrument" }
+    ],
+    "edges": [
+      { "from": "T-101", "to": "P-101", "label": "DN100 SS316L" },
+      { "from": "P-101", "to": "CV-101" },
+      { "from": "CV-101", "to": "FT-101" }
+    ]
+  },
   "piping": {
     "material": "e.g. Carbon Steel, SS316L, HDPE",
     "nominal_diameter_inch": 2,
@@ -577,6 +607,29 @@ function cleanRecommendation(rec: Record<string, unknown>): Record<string, unkno
     cleaned.instrumentation = cleaned.instrumentation.filter(
       (i) => typeof i === 'object' && i !== null && typeof (i as { tag?: unknown }).tag === 'string',
     );
+  }
+
+  // Process flow: clean nodes (need id) and edges (need from + to)
+  const pf = cleaned.process_flow as { nodes?: unknown[]; edges?: unknown[] } | undefined;
+  if (pf) {
+    if (Array.isArray(pf.nodes)) {
+      pf.nodes = pf.nodes.filter(
+        (n) => typeof n === 'object' && n !== null && typeof (n as { id?: unknown }).id === 'string' && ((n as { id: string }).id).trim().length > 0,
+      );
+    }
+    if (Array.isArray(pf.edges)) {
+      const validIds = new Set(((pf.nodes as Array<{ id: string }>) ?? []).map((n) => n.id));
+      pf.edges = (pf.edges as unknown[]).filter((e) => {
+        if (typeof e !== 'object' || e === null) return false;
+        const edge = e as { from?: unknown; to?: unknown };
+        if (typeof edge.from !== 'string' || typeof edge.to !== 'string') return false;
+        // If we have nodes, drop edges that reference non-existent nodes
+        if (validIds.size > 0 && (!validIds.has(edge.from) || !validIds.has(edge.to))) return false;
+        return true;
+      });
+    }
+    // Drop the AI's "_instruction" key if it copied it
+    delete (pf as { _instruction?: unknown })._instruction;
   }
 
   return cleaned;

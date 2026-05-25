@@ -142,58 +142,30 @@ export default function ProcessFlowDiagram({ flow, projectName }: ProcessFlowDia
       const svgEl = containerRef.current.querySelector('svg');
       if (!svgEl) throw new Error('No diagram to download');
 
-      // Get SVG dimensions for canvas sizing
+      // Clone and add explicit dimensions + namespace for proper rendering in any viewer
       const bbox = svgEl.getBoundingClientRect();
       const width = bbox.width || svgEl.clientWidth || 1200;
       const height = bbox.height || svgEl.clientHeight || 800;
 
-      // Ensure SVG has explicit dimensions for proper serialization
       const clone = svgEl.cloneNode(true) as SVGElement;
       clone.setAttribute('width', String(width));
       clone.setAttribute('height', String(height));
-      // Mermaid sometimes uses viewBox without width/height — ensure both exist
       if (!clone.getAttribute('xmlns')) {
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
       }
 
-      // Serialize SVG to string
-      const svgString = new XMLSerializer().serializeToString(clone);
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
+      // Wrap in dark background rect so the SVG looks the same outside the app
+      const bgRect = `<rect width="${width}" height="${height}" fill="#0f172a"/>`;
+      let svgString = new XMLSerializer().serializeToString(clone);
+      svgString = svgString.replace(/(<svg[^>]*>)/, `$1${bgRect}`);
 
-      // Load SVG into Image, then draw to canvas (2x scale for crisp output)
-      const SCALE = 2;
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      const imgLoadPromise = new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load SVG image'));
-        img.src = url;
-      });
-      await imgLoadPromise;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width * SCALE;
-      canvas.height = height * SCALE;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas 2D context not available');
-      // Dark background to match the page theme
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.scale(SCALE, SCALE);
-      ctx.drawImage(img, 0, 0, width, height);
-
-      URL.revokeObjectURL(url);
-
-      // Convert canvas to PNG blob and trigger direct download
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) throw new Error('Could not convert diagram to image');
-
+      // Direct SVG download — no canvas, no taint, opens in any browser / Inkscape / Figma
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const safeName = projectName.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_');
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `${safeName}_PID_Diagram.png`;
+      a.download = `${safeName}_PID_Diagram.svg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

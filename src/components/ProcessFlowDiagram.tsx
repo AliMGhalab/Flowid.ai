@@ -142,21 +142,52 @@ export default function ProcessFlowDiagram({ flow, projectName }: ProcessFlowDia
       const svgEl = containerRef.current.querySelector('svg');
       if (!svgEl) throw new Error('No diagram to download');
 
-      // Dynamic imports — heavy libs, only on click
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
+      // Get SVG dimensions for canvas sizing
+      const bbox = svgEl.getBoundingClientRect();
+      const width = bbox.width || svgEl.clientWidth || 1200;
+      const height = bbox.height || svgEl.clientHeight || 800;
 
-      // Render the SVG element to a canvas (high res)
-      const canvas = await html2canvas(svgEl.parentElement as HTMLElement, {
-        backgroundColor: '#0f172a',
-        scale: 2, // 2x for crisper output
-        useCORS: true,
-        logging: false,
+      // Ensure SVG has explicit dimensions for proper serialization
+      const clone = svgEl.cloneNode(true) as SVGElement;
+      clone.setAttribute('width', String(width));
+      clone.setAttribute('height', String(height));
+      // Mermaid sometimes uses viewBox without width/height — ensure both exist
+      if (!clone.getAttribute('xmlns')) {
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      }
+
+      // Serialize SVG to string
+      const svgString = new XMLSerializer().serializeToString(clone);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      // Load SVG into Image, then draw to canvas (2x scale for crisp output)
+      const SCALE = 2;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const imgLoadPromise = new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load SVG image'));
+        img.src = url;
       });
+      await imgLoadPromise;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width * SCALE;
+      canvas.height = height * SCALE;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context not available');
+      // Dark background to match the page theme
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(SCALE, SCALE);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      URL.revokeObjectURL(url);
 
       const imgData = canvas.toDataURL('image/png');
+
+      const { default: jsPDF } = await import('jspdf');
 
       // A3 landscape: 420mm × 297mm
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });

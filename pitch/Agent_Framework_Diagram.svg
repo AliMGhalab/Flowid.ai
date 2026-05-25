@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Calibri, 'Segoe UI', sans-serif">
+
+  <!-- ─── Background ──────────────────────────────────────────────────────── -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020817"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="validGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+
+    <!-- Arrowhead marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22D3EE"/>
+    </marker>
+    <marker id="arrowMute" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22C55E"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bgGrad)"/>
+
+  <!-- ─── Title ───────────────────────────────────────────────────────────── -->
+  <text x="60" y="55" font-size="32" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">
+    Flowid.ai — Multi-Agent Architecture
+  </text>
+  <text x="60" y="85" font-size="15" fill="#94A3B8" font-style="italic">
+    Six specialised agents → 12-check validation layer → persistent storage → engineer review
+  </text>
+
+  <!-- ─── Section 1: Input ────────────────────────────────────────────────── -->
+  <g id="input">
+    <rect x="60" y="130" width="280" height="100" rx="14" fill="#1E293B" stroke="#60A5FA" stroke-width="2"/>
+    <rect x="60" y="130" width="6" height="100" rx="3" fill="#60A5FA"/>
+    <text x="80" y="160" font-size="11" font-weight="700" fill="#60A5FA" letter-spacing="3">INPUT</text>
+    <text x="80" y="186" font-size="17" font-weight="700" fill="#FFFFFF">Engineer Form</text>
+    <text x="80" y="208" font-size="12" fill="#94A3B8">Industry · Fluid · State · Budget</text>
+    <text x="80" y="223" font-size="12" fill="#94A3B8">+ optional scale parameters</text>
+  </g>
+
+  <!-- Arrow to Planner -->
+  <line x1="200" y1="230" x2="200" y2="265" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- ─── Section 2: Planner Agent ────────────────────────────────────────── -->
+  <g id="planner">
+    <rect x="60" y="265" width="280" height="100" rx="14" fill="#1E293B" stroke="#22D3EE" stroke-width="2.5"/>
+    <rect x="60" y="265" width="6" height="100" rx="3" fill="#22D3EE"/>
+    <circle cx="100" cy="295" r="16" fill="#22D3EE" opacity="0.2"/>
+    <text x="100" y="301" font-size="20" text-anchor="middle" fill="#22D3EE">🧭</text>
+    <text x="130" y="290" font-size="11" font-weight="700" fill="#22D3EE" letter-spacing="3">AGENT 1</text>
+    <text x="130" y="312" font-size="17" font-weight="700" fill="#FFFFFF">Planner</text>
+    <text x="80" y="338" font-size="12" fill="#94A3B8">Determines process parameters</text>
+    <text x="80" y="354" font-size="12" fill="#94A3B8">Classifies system type</text>
+  </g>
+
+  <!-- Distribution arrow to parallel agents -->
+  <line x1="200" y1="365" x2="200" y2="400" stroke="#22D3EE" stroke-width="2.5"/>
+  <!-- Horizontal distribution bar -->
+  <line x1="120" y1="400" x2="1380" y2="400" stroke="#22D3EE" stroke-width="2.5"/>
+  <!-- Drops to each agent -->
+  <line x1="200" y1="400" x2="200" y2="430" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="500" y1="400" x2="500" y2="430" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="800" y1="400" x2="800" y2="430" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="1100" y1="400" x2="1100" y2="430" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="1380" y1="400" x2="1380" y2="430" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Label on distribution line -->
+  <rect x="555" y="385" width="170" height="22" rx="11" fill="#020817" stroke="#22D3EE" stroke-width="1"/>
+  <text x="640" y="401" font-size="11" font-weight="700" fill="#22D3EE" text-anchor="middle">PARALLEL EXECUTION</text>
+
+  <!-- ─── Section 3: Five parallel agents ─────────────────────────────────── -->
+  <!-- Agent 2: BOM -->
+  <g id="bom">
+    <rect x="60" y="430" width="280" height="120" rx="14" fill="#1E293B" stroke="#3B82F6" stroke-width="2"/>
+    <rect x="60" y="430" width="6" height="120" rx="3" fill="#3B82F6"/>
+    <circle cx="100" cy="462" r="16" fill="#3B82F6" opacity="0.2"/>
+    <text x="100" y="468" font-size="18" text-anchor="middle">📦</text>
+    <text x="130" y="455" font-size="11" font-weight="700" fill="#3B82F6" letter-spacing="3">AGENT 2</text>
+    <text x="130" y="477" font-size="17" font-weight="700" fill="#FFFFFF">BOM</text>
+    <text x="80" y="505" font-size="12" fill="#CBD5E1">Malaysian suppliers</text>
+    <text x="80" y="522" font-size="12" fill="#94A3B8">Grundfos, KITZ, ABB,</text>
+    <text x="80" y="538" font-size="12" fill="#94A3B8">Endress+Hauser…</text>
+  </g>
+
+  <!-- Agent 3: Hydraulics -->
+  <g id="hydraulics">
+    <rect x="360" y="430" width="280" height="120" rx="14" fill="#1E293B" stroke="#8B5CF6" stroke-width="2"/>
+    <rect x="360" y="430" width="6" height="120" rx="3" fill="#8B5CF6"/>
+    <circle cx="400" cy="462" r="16" fill="#8B5CF6" opacity="0.2"/>
+    <text x="400" y="468" font-size="18" text-anchor="middle">💧</text>
+    <text x="430" y="455" font-size="11" font-weight="700" fill="#8B5CF6" letter-spacing="3">AGENT 3</text>
+    <text x="430" y="477" font-size="17" font-weight="700" fill="#FFFFFF">Hydraulics</text>
+    <text x="380" y="505" font-size="12" fill="#CBD5E1">NPSH · Reynolds</text>
+    <text x="380" y="522" font-size="12" fill="#94A3B8">Pump shaft power</text>
+    <text x="380" y="538" font-size="12" fill="#94A3B8">IEC 60034 motor sizing</text>
+  </g>
+
+  <!-- Agent 4: HAZOP -->
+  <g id="hazop">
+    <rect x="660" y="430" width="280" height="120" rx="14" fill="#1E293B" stroke="#F59E0B" stroke-width="2"/>
+    <rect x="660" y="430" width="6" height="120" rx="3" fill="#F59E0B"/>
+    <circle cx="700" cy="462" r="16" fill="#F59E0B" opacity="0.2"/>
+    <text x="700" y="468" font-size="18" text-anchor="middle">⚠️</text>
+    <text x="730" y="455" font-size="11" font-weight="700" fill="#F59E0B" letter-spacing="3">AGENT 4</text>
+    <text x="730" y="477" font-size="17" font-weight="700" fill="#FFFFFF">HAZOP</text>
+    <text x="680" y="505" font-size="12" fill="#CBD5E1">Guideword analysis</text>
+    <text x="680" y="522" font-size="12" fill="#94A3B8">NO FLOW · MORE PRESSURE</text>
+    <text x="680" y="538" font-size="12" fill="#94A3B8">LEAK · ELECTRICAL · …</text>
+  </g>
+
+  <!-- Agent 5: Cost -->
+  <g id="cost">
+    <rect x="960" y="430" width="280" height="120" rx="14" fill="#1E293B" stroke="#22C55E" stroke-width="2"/>
+    <rect x="960" y="430" width="6" height="120" rx="3" fill="#22C55E"/>
+    <circle cx="1000" cy="462" r="16" fill="#22C55E" opacity="0.2"/>
+    <text x="1000" y="468" font-size="18" text-anchor="middle">💰</text>
+    <text x="1030" y="455" font-size="11" font-weight="700" fill="#22C55E" letter-spacing="3">AGENT 5</text>
+    <text x="1030" y="477" font-size="17" font-weight="700" fill="#FFFFFF">Cost</text>
+    <text x="980" y="505" font-size="12" fill="#CBD5E1">AACE Class 4–5</text>
+    <text x="980" y="522" font-size="12" fill="#94A3B8">Lang Factor Method</text>
+    <text x="980" y="538" font-size="12" fill="#94A3B8">MYR + East MY premium</text>
+  </g>
+
+  <!-- Agent 6: P&ID -->
+  <g id="pid">
+    <rect x="1260" y="430" width="280" height="120" rx="14" fill="#1E293B" stroke="#EC4899" stroke-width="2"/>
+    <rect x="1260" y="430" width="6" height="120" rx="3" fill="#EC4899"/>
+    <circle cx="1300" cy="462" r="16" fill="#EC4899" opacity="0.2"/>
+    <text x="1300" y="468" font-size="18" text-anchor="middle">🔧</text>
+    <text x="1330" y="455" font-size="11" font-weight="700" fill="#EC4899" letter-spacing="3">AGENT 6</text>
+    <text x="1330" y="477" font-size="17" font-weight="700" fill="#FFFFFF">P&amp;ID</text>
+    <text x="1280" y="505" font-size="12" fill="#CBD5E1">Process flow graph</text>
+    <text x="1280" y="522" font-size="12" fill="#94A3B8">Nodes + edges</text>
+    <text x="1280" y="538" font-size="12" fill="#94A3B8">Mermaid SVG render</text>
+  </g>
+
+  <!-- Convergence lines to validation -->
+  <line x1="200" y1="550" x2="200" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="500" y1="550" x2="500" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="800" y1="550" x2="800" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="1100" y1="550" x2="1100" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="1380" y1="550" x2="1380" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="120" y1="585" x2="1380" y2="585" stroke="#22D3EE" stroke-width="2"/>
+  <line x1="800" y1="585" x2="800" y2="615" stroke="#22C55E" stroke-width="3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ─── Section 4: Validation Layer ─────────────────────────────────────── -->
+  <g id="validation">
+    <rect x="280" y="615" width="1040" height="110" rx="14" fill="#022C22" stroke="#22C55E" stroke-width="2.5"/>
+    <rect x="280" y="615" width="6" height="110" rx="3" fill="#22C55E"/>
+
+    <text x="320" y="652" font-size="13" font-weight="700" fill="#22C55E" letter-spacing="4">🛡  VALIDATION LAYER</text>
+    <text x="320" y="678" font-size="20" font-weight="700" fill="#FFFFFF">12 Server-Side Integrity Checks</text>
+
+    <!-- Three rows of check chips -->
+    <g font-size="10" fill="#A7F3D0">
+      <rect x="320" y="690" width="148" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="394" y="706" text-anchor="middle">Cost = BOM sum</text>
+
+      <rect x="478" y="690" width="148" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="552" y="706" text-anchor="middle">NPSH ≥ 0.6 m</text>
+
+      <rect x="636" y="690" width="148" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="710" y="706" text-anchor="middle">Re re-computed</text>
+
+      <rect x="794" y="690" width="148" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="868" y="706" text-anchor="middle">Motor ≥ shaft (IEC)</text>
+
+      <rect x="952" y="690" width="148" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="1026" y="706" text-anchor="middle">HAZOP coverage</text>
+
+      <rect x="1110" y="690" width="180" height="22" rx="11" fill="#022C22" stroke="#14B8A6" stroke-width="1"/>
+      <text x="1200" y="706" text-anchor="middle">Material compatibility · +6 more</text>
+    </g>
+  </g>
+
+  <!-- Arrow down to storage -->
+  <line x1="800" y1="725" x2="800" y2="752" stroke="#22C55E" stroke-width="3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ─── Section 5: Storage + Output ─────────────────────────────────────── -->
+  <g id="storage">
+    <rect x="480" y="752" width="320" height="80" rx="14" fill="#1E293B" stroke="#64748B" stroke-width="2"/>
+    <rect x="480" y="752" width="6" height="80" rx="3" fill="#64748B"/>
+    <text x="510" y="780" font-size="11" font-weight="700" fill="#94A3B8" letter-spacing="3">PERSISTENCE</text>
+    <text x="510" y="804" font-size="16" font-weight="700" fill="#FFFFFF">💾  Firestore Storage</text>
+    <text x="510" y="822" font-size="11" fill="#94A3B8">Not ephemeral — survives sessions, users, devices</text>
+  </g>
+
+  <!-- Arrow from storage to output -->
+  <line x1="800" y1="792" x2="855" y2="792" stroke="#22D3EE" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <g id="engineerOut">
+    <rect x="860" y="752" width="340" height="80" rx="14" fill="#0C4A6E" stroke="#22D3EE" stroke-width="2.5"/>
+    <rect x="860" y="752" width="6" height="80" rx="3" fill="#22D3EE"/>
+    <text x="890" y="780" font-size="11" font-weight="700" fill="#22D3EE" letter-spacing="3">ENGINEER WORKFLOW</text>
+    <text x="890" y="804" font-size="16" font-weight="700" fill="#FFFFFF">👷  PE Review &amp; Stamp</text>
+    <text x="890" y="822" font-size="11" fill="#CBD5E1">PE keeps engineering judgement — AI removes documentation work</text>
+  </g>
+
+  <!-- ─── Right sidebar: AI Fallback Chain & Decision Logic ───────────────── -->
+  <g id="sidebar">
+    <rect x="60" y="752" width="400" height="80" rx="14" fill="#1E1B4B" stroke="#8B5CF6" stroke-width="1.5"/>
+    <rect x="60" y="752" width="6" height="80" rx="3" fill="#8B5CF6"/>
+    <text x="90" y="780" font-size="11" font-weight="700" fill="#A78BFA" letter-spacing="3">AI FALLBACK CHAIN — DECISION LOGIC</text>
+    <text x="90" y="804" font-size="13" font-weight="700" fill="#FFFFFF">Cerebras Qwen 235B  →  Mistral Medium  →  SambaNova Llama 3.3</text>
+    <text x="90" y="822" font-size="10" fill="#C4B5FD" font-style="italic">If 429 / 5xx / timeout → skip to next provider · 35s max per attempt</text>
+  </g>
+
+  <!-- ─── Footer with note about decision logic in validation ─────────────── -->
+  <line x1="60" y1="855" x2="1540" y2="855" stroke="#1E293B" stroke-width="1"/>
+  <text x="60" y="880" font-size="11" fill="#64748B" font-style="italic">
+    Decision Logic — Validation failures auto-correct (cost reconciled · math overridden · flow regime relabelled) and surface to the engineer as visible warnings, never silenced.
+  </text>
+
+</svg>

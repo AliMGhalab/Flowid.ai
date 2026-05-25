@@ -9,6 +9,7 @@ import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule, L
 import { getFluidLabel } from '@/lib/fluidLabels';
 import ProcessFlowDiagram from '@/components/ProcessFlowDiagram';
 import ValidationNotes from '@/components/ValidationNotes';
+import EngineerActionPlan from '@/components/EngineerActionPlan';
 import type { ValidationWarning } from '@/types';
 import {
   ArrowLeft,
@@ -311,6 +312,14 @@ function OverviewTab({ project }: { project: Project }) {
           <p className="text-slate-300 leading-relaxed">{rec.engineering_notes}</p>
         </SectionCard>
       )}
+
+      {/* Engineer's action plan — what to revise + how to use this report */}
+      <EngineerActionPlan
+        warnings={warnings}
+        components={rec.components ?? []}
+        risks={rec.risk_assessment?.risks ?? []}
+        systemType={rec.system_type ?? 'fluid system'}
+      />
     </div>
   );
 }

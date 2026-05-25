@@ -810,7 +810,7 @@ function reconcileCosts(rec: Record<string, unknown>): void {
     ce.transportation_cost_myr,
     10,
     'Transportation',
-    'Covers logistics from supplier cities (Klang Valley / PJ) to project site. East Malaysia projects include 10–15% air/sea freight premium.',
+    'Per AACE Class 3–4 estimating practice (5–15% of equipment for domestic logistics). Covers shipment from supplier cities (Klang Valley / PJ) to project site, including handling, port fees, and inland trucking. East Malaysia projects warrant 10–15% air/sea freight premium.',
   );
   ce.transportation_cost_myr = transport.value;
   ce.transportation_basis = transport.basis;
@@ -820,7 +820,7 @@ function reconcileCosts(rec: Record<string, unknown>): void {
     ce.installation_cost_myr,
     20,
     'Installation',
-    'Mechanical erection, piping fabrication, electrical termination, instrument hook-up, and pre-commissioning by Malaysian contractor.',
+    'Per AACE Recommended Practice 18R-97 and Lang Factor Method for process equipment (typical 15–25% of equipment cost). Covers mechanical erection, piping fabrication, electrical termination, instrument hook-up, and pre-commissioning by Malaysian DOSH-licensed contractor.',
   );
   ce.installation_cost_myr = install.value;
   ce.installation_basis = install.basis;
@@ -830,7 +830,7 @@ function reconcileCosts(rec: Record<string, unknown>): void {
     ce.engineering_cost_myr,
     12,
     'Engineering',
-    'Detailed design, P&ID development, equipment data sheets, site supervision, and as-built documentation.',
+    'Per EPC industry benchmarks and Hand\'s Method for chemical plant estimating (typical 10–15% of equipment cost for Class 3–4 detailed design). Covers P&ID development, equipment data sheets, hydraulic calculations, site supervision, and as-built documentation by a licensed PE.',
   );
   ce.engineering_cost_myr = engineering.value;
   ce.engineering_basis = engineering.basis;
@@ -840,7 +840,7 @@ function reconcileCosts(rec: Record<string, unknown>): void {
     ce.commissioning_cost_myr,
     5,
     'Commissioning',
-    'System flushing, pressure testing, fluid loading, control loop tuning, operator training, and performance verification.',
+    'Per AACE Lang Factor Method for process system start-up (typical 3–8% of equipment cost). Covers system flushing, hydrostatic pressure testing, fluid loading, control loop tuning, operator training, and performance verification per DOSH commissioning requirements.',
   );
   ce.commissioning_cost_myr = commissioning.value;
   ce.commissioning_basis = commissioning.basis;

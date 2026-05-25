@@ -808,6 +808,16 @@ function CostsTab({ project }: { project: Project }) {
       </div>
 
       <SectionCard title="Cost Breakdown">
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-slate-700/50 bg-slate-800/30 p-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <p className="text-xs leading-relaxed text-slate-400">
+            <span className="font-medium text-slate-300">Estimating methodology: </span>
+            Class 4–5 feasibility estimate per AACE International cost classification (typical accuracy ±30–50%).
+            Equipment cost is the verified sum of BOM line items. Non-equipment lines use AACE / Lang-Method
+            percentages of equipment cost, adjusted to Malaysian market conditions. For procurement-grade pricing,
+            a licensed PE must validate via supplier quotations.
+          </p>
+        </div>
         <div className="space-y-4">
           {rows.map((row) => {
             const pct = total > 0 ? (row.value / total) * 100 : 0;

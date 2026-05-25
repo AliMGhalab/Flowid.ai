@@ -351,7 +351,7 @@ function ComponentsTab({ components }: { components: SystemComponent[] }) {
       const found = Object.values(map).filter((r) => r.found).length;
       toast.success(`Found live prices for ${found} of ${components.length} components`);
     } catch {
-      toast.error('Live price check failed — check your TAVILY_API_KEY');
+      toast.error('Live price check unavailable right now. Try again later.');
     } finally {
       setPriceLoading(false);
     }
@@ -396,11 +396,10 @@ function ComponentsTab({ components }: { components: SystemComponent[] }) {
         </button>
       </div>
 
-      {/* Hint when no Tavily key */}
+      {/* Hint */}
       {!priceLoading && Object.keys(livePrices).length === 0 && (
         <p className="text-xs text-slate-500">
-          Click &ldquo;Check Live Prices&rdquo; to search real Malaysian supplier websites for current pricing.
-          Requires a <span className="text-slate-300">TAVILY_API_KEY</span> environment variable.
+          Click &ldquo;Check Live Prices&rdquo; to query Malaysian supplier websites for current pricing.
         </p>
       )}
 

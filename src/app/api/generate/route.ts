@@ -153,7 +153,33 @@ function runSanityChecks(rec: Record<string, unknown>): ValidationWarning[] {
     });
   }
 
-  // 4. Component cost outliers — flag single items > 50% of total (might be misplaced decimal)
+  // 4. Process flow quality — diagram should have ≥10 nodes and form a connected chain
+  const pf = rec.process_flow as { nodes?: Array<{ id: string }>; edges?: Array<{ from: string; to: string }> } | undefined;
+  if (pf?.nodes && pf?.edges) {
+    if (pf.nodes.length < 6) {
+      warnings.push({
+        code: 'PID_TOO_SMALL',
+        severity: 'info',
+        message: `Process flow diagram has only ${pf.nodes.length} nodes — recommend at least 10 for a useful P&ID.`,
+      });
+    }
+    // Count orphan nodes (no edges in or out)
+    const connectedIds = new Set<string>();
+    for (const e of pf.edges) {
+      connectedIds.add(e.from);
+      connectedIds.add(e.to);
+    }
+    const orphans = pf.nodes.filter((n) => !connectedIds.has(n.id));
+    if (orphans.length > 0) {
+      warnings.push({
+        code: 'PID_ORPHAN_NODES',
+        severity: 'info',
+        message: `${orphans.length} node(s) in the diagram have no connections: ${orphans.map((n) => n.id).join(', ')}.`,
+      });
+    }
+  }
+
+  // 5. Component cost outliers — flag single items > 50% of total (might be misplaced decimal)
   if (componentSum > 0) {
     for (const c of components as Array<{ name?: string; total_cost_myr?: number }>) {
       if ((c.total_cost_myr ?? 0) > componentSum * 0.5) {
@@ -365,6 +391,17 @@ TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967
 - instrumentation: ≥4 tags — FT (main), PT (discharge), PT (suction or vessel), TT (if temp matters); add LT for vessels, AT/QT for chemistry
 - risk_assessment.risks: ≥20 entries from HAZOP above
 - engineering_calculations: every applicable field computed
+- process_flow: minimum 10 nodes, minimum 9 edges — see rules below
+
+PROCESS FLOW DIAGRAM (P&ID) — this drives a visual diagram. Quality requirements:
+- MINIMUM 10 nodes, IDEALLY 12-18. Cover: source/tank → suction isolation → strainer → pump(s) → check valve → instruments (PT/FT) → discharge valve → PSV → process equipment (HX/vessel/etc.) → control valve → expansion → destination.
+- EVERY node must be connected — no orphan nodes. Each node appears in at least one edge.
+- Edges form a CONTINUOUS chain from source to destination. Walk the JSON in order — there should be a path from the first vessel to the last.
+- Use IDs that MATCH your BOM component IDs where possible (e.g. if BOM has C-001 = main pump, use "P-101" or "C-001" consistently in both).
+- node.type must be one of: "vessel", "pump", "valve", "instrument", "equipment", "fitting", "other".
+- Optional edge.label for pipe size / fluid (e.g. "DN100 SS316L", "DN50 PVC").
+- Include redundancy where the system has it: duty + standby pumps both connect to same header.
+- For complex systems include bypass loops, sample lines, drain lines as branch edges.
 
 12. COST INTEGRITY — every monetary value must trace back to a source:
 - Every component MUST have unit_cost_myr (real catalogue / market price) AND price_basis (source: "Grundfos Malaysia May 2026 list price", "based on supplier quote from KITZ PJ", "Malaysian SIRIM-listed pricing", etc.).
@@ -420,17 +457,39 @@ Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST �
     "notes": "Darcy-Weisbach for water at op temp; NPSH margin per API 610; motor sized per IEC 60034"
   },
   "process_flow": {
-    "_instruction": "MANDATORY: list the major equipment as nodes and the physical pipe connections as edges. This drives a P&ID diagram. Use 8-18 nodes covering: source/tank, pump(s), key valves (check, control, PSV), instruments (FT/PT/TT), heat exchangers, separators, destination/header. Connect them in physical flow order from source to destination. Use IDs like T-101, P-101, CV-101, FT-101 that match component IDs in your BOM where possible.",
     "nodes": [
-      { "id": "T-101", "label": "Feed Tank", "type": "vessel" },
-      { "id": "P-101", "label": "Pump P-101 (duty)", "type": "pump" },
-      { "id": "CV-101", "label": "Check Valve", "type": "valve" },
-      { "id": "FT-101", "label": "Flow Transmitter", "type": "instrument" }
+      { "id": "T-101",   "label": "Feed Tank",          "type": "vessel" },
+      { "id": "SV-101",  "label": "Suction Isolation",  "type": "valve" },
+      { "id": "ST-101",  "label": "Y-Strainer",         "type": "fitting" },
+      { "id": "P-101",   "label": "Pump P-101 (duty)",  "type": "pump" },
+      { "id": "P-102",   "label": "Pump P-102 (standby)", "type": "pump" },
+      { "id": "CV-101",  "label": "Check Valve",        "type": "valve" },
+      { "id": "PT-101",  "label": "Pressure TX",        "type": "instrument" },
+      { "id": "FT-101",  "label": "Flow TX",            "type": "instrument" },
+      { "id": "DV-101",  "label": "Discharge Valve",    "type": "valve" },
+      { "id": "PSV-101", "label": "PSV (relief)",       "type": "valve" },
+      { "id": "HX-101",  "label": "Heat Exchanger",     "type": "equipment" },
+      { "id": "TT-101",  "label": "Temp TX",            "type": "instrument" },
+      { "id": "CV-102",  "label": "Control Valve",      "type": "valve" },
+      { "id": "EV-101",  "label": "Expansion Vessel",   "type": "vessel" },
+      { "id": "DEST",    "label": "Process Destination", "type": "vessel" }
     ],
     "edges": [
-      { "from": "T-101", "to": "P-101", "label": "DN100 SS316L" },
-      { "from": "P-101", "to": "CV-101" },
-      { "from": "CV-101", "to": "FT-101" }
+      { "from": "T-101",  "to": "SV-101",  "label": "DN100 SS316L" },
+      { "from": "SV-101", "to": "ST-101" },
+      { "from": "ST-101", "to": "P-101" },
+      { "from": "ST-101", "to": "P-102" },
+      { "from": "P-101",  "to": "CV-101" },
+      { "from": "P-102",  "to": "CV-101" },
+      { "from": "CV-101", "to": "PT-101" },
+      { "from": "PT-101", "to": "FT-101" },
+      { "from": "FT-101", "to": "DV-101" },
+      { "from": "DV-101", "to": "PSV-101" },
+      { "from": "PSV-101","to": "HX-101" },
+      { "from": "HX-101", "to": "TT-101" },
+      { "from": "TT-101", "to": "CV-102" },
+      { "from": "CV-102", "to": "EV-101" },
+      { "from": "EV-101", "to": "DEST" }
     ]
   },
   "piping": {

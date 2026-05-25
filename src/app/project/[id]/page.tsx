@@ -752,6 +752,7 @@ type MyrCostEst = {
   commissioning_cost_myr?: number; commissioning_cost_usd?: number;
   total_cost_myr?: number; total_cost_usd?: number;
   within_budget?: boolean; budget_notes?: string;
+  cost_basis?: string;
 };
 
 function CostsTab({ project }: { project: Project }) {
@@ -828,6 +829,15 @@ function CostsTab({ project }: { project: Project }) {
         </div>
         {est.budget_notes && (
           <p className="mt-4 text-sm text-slate-400">{est.budget_notes}</p>
+        )}
+        {est.cost_basis && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+            <p className="text-xs text-blue-200/80">
+              <span className="font-medium text-blue-300">Cost basis: </span>
+              {est.cost_basis}
+            </p>
+          </div>
         )}
       </SectionCard>
     </div>

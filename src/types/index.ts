@@ -154,6 +154,7 @@ export interface CostEstimate {
   total_cost_usd?: number;
   within_budget: boolean;
   budget_notes: string;
+  cost_basis?: string;  // Server-added: explains how equipment cost was derived (from BOM sum, etc.)
 }
 
 export interface LivePriceResult {

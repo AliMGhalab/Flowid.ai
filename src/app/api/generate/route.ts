@@ -366,7 +366,18 @@ TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967
 - risk_assessment.risks: ≥20 entries from HAZOP above
 - engineering_calculations: every applicable field computed
 
-12. ENGINEERING CALCULATIONS — fill with REAL numbers from your process parameters:
+12. COST INTEGRITY — every monetary value must trace back to a source:
+- Every component MUST have unit_cost_myr (real catalogue / market price) AND price_basis (source: "Grundfos Malaysia May 2026 list price", "based on supplier quote from KITZ PJ", "Malaysian SIRIM-listed pricing", etc.).
+- total_cost_myr = unit_cost_myr × quantity. Compute it, don't guess.
+- equipment_cost_myr in cost_estimate MUST equal sum of all component total_cost_myr. If you sum it manually and get a different number, recheck — there is no other source of truth.
+- Transportation: 5–15% of equipment cost based on distance / East Malaysia premium.
+- Installation: 15–25% of equipment cost based on system scale.
+- Engineering: 8–15% of equipment cost.
+- Commissioning: 3–8% of equipment cost.
+- total_cost_myr = equipment + transportation + installation + engineering + commissioning. Verify the sum.
+- DO NOT invent costs that don't appear in the BOM. If a category line shows RM X but the components only justify RM X/10, the user loses trust.
+
+13. ENGINEERING CALCULATIONS — fill with REAL numbers from your process parameters:
 - NPSHa = atm_pressure + suction_static_head − vapour_pressure − friction_losses
 - TDH = static_head + friction_head + velocity_head
 - Pump shaft kW = (Q_m3/s × H_m × ρ × 9.81) / (η × 1000); η ≈ 0.65–0.75
@@ -640,7 +651,68 @@ function cleanRecommendation(rec: Record<string, unknown>): Record<string, unkno
     delete (pf as { _instruction?: unknown })._instruction;
   }
 
+  // ─── COST RECONCILIATION ──────────────────────────────────────────────
+  // The AI sometimes invents equipment_cost_myr that doesn't match the BOM sum.
+  // We ALWAYS recompute equipment cost from the actual components, and rebuild
+  // total_cost_myr from the verified breakdown. Truth comes from the BOM, not the AI.
+  reconcileCosts(cleaned);
+
   return cleaned;
+}
+
+interface CostEstimate {
+  equipment_cost_myr?: number;
+  transportation_cost_myr?: number;
+  installation_cost_myr?: number;
+  engineering_cost_myr?: number;
+  commissioning_cost_myr?: number;
+  total_cost_myr?: number;
+  within_budget?: boolean;
+  budget_notes?: string;
+  cost_basis?: string;
+}
+
+function reconcileCosts(rec: Record<string, unknown>): void {
+  // Sum equipment from real components
+  const components = (rec.components as Array<{ total_cost_myr?: number; unit_cost_myr?: number; quantity?: number }> | undefined) ?? [];
+  let equipmentSum = 0;
+  for (const c of components) {
+    const total = typeof c.total_cost_myr === 'number'
+      ? c.total_cost_myr
+      : (typeof c.unit_cost_myr === 'number' && typeof c.quantity === 'number')
+        ? c.unit_cost_myr * c.quantity
+        : 0;
+    equipmentSum += total;
+  }
+
+  if (equipmentSum === 0) return; // no usable BOM data — leave AI numbers alone
+
+  const ce = (rec.cost_estimate as CostEstimate | undefined) ?? {};
+  const aiClaimedEquipment = ce.equipment_cost_myr ?? 0;
+  const drift = aiClaimedEquipment > 0
+    ? Math.abs(aiClaimedEquipment - equipmentSum) / Math.max(aiClaimedEquipment, equipmentSum)
+    : 1;
+
+  // If AI's equipment number drifts > 5% from BOM sum, OVERRIDE with truth from BOM
+  if (drift > 0.05) {
+    console.warn(`[reconcile] equipment cost mismatch — AI: RM ${aiClaimedEquipment.toLocaleString()} vs BOM sum: RM ${equipmentSum.toLocaleString()} (${(drift * 100).toFixed(1)}% drift). Overriding with BOM sum.`);
+    ce.equipment_cost_myr = Math.round(equipmentSum);
+    ce.cost_basis = `Equipment cost auto-calculated as sum of ${components.length} BOM items (AI's original estimate of RM ${aiClaimedEquipment.toLocaleString()} was off by ${(drift * 100).toFixed(0)}%).`;
+  } else {
+    ce.equipment_cost_myr = Math.round(equipmentSum);
+    ce.cost_basis = `Equipment cost = sum of ${components.length} BOM items.`;
+  }
+
+  // Keep AI's other line items but recompute the total
+  const transport = ce.transportation_cost_myr ?? 0;
+  const install = ce.installation_cost_myr ?? 0;
+  const engineering = ce.engineering_cost_myr ?? 0;
+  const commissioning = ce.commissioning_cost_myr ?? 0;
+
+  const recomputedTotal = ce.equipment_cost_myr + transport + install + engineering + commissioning;
+  ce.total_cost_myr = Math.round(recomputedTotal);
+
+  rec.cost_estimate = ce as unknown as Record<string, unknown>;
 }
 
 function validateRecommendation(rec: Record<string, unknown>): Record<string, unknown> {

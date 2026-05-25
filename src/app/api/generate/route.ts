@@ -201,6 +201,14 @@ function getMistralClient() {
   });
 }
 
+function getSambaNovaClient() {
+  return new OpenAI({
+    apiKey: process.env.SAMBANOVA_API_KEY!,
+    baseURL: 'https://api.sambanova.ai/v1',
+    maxRetries: 0,
+  });
+}
+
 // ─── Malaysian supplier knowledge by region (compact) ───────────────────────
 const MALAYSIA_SUPPLIER_CONTEXT = `
 MALAYSIA SUPPLIER DIRECTORY (pick by proximity to project state):
@@ -672,7 +680,7 @@ function validateRecommendation(rec: Record<string, unknown>): Record<string, un
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral';
+  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral' | 'sambanova';
   model: string;
   max_tokens: number;
 }
@@ -688,6 +696,10 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.MISTRAL_API_KEY) {
     roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
   }
+  // SambaNova Llama 3.3 70B — third fallback (specialized fast hardware, different vendor)
+  if (process.env.SAMBANOVA_API_KEY) {
+    roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 10000 });
+  }
 
   return roster;
 }
@@ -696,6 +708,7 @@ function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'chutes') return getChutesClient();
   if (cfg.provider === 'cerebras') return getCerebrasClient();
   if (cfg.provider === 'mistral') return getMistralClient();
+  if (cfg.provider === 'sambanova') return getSambaNovaClient();
   return getGeminiClient();
 }
 

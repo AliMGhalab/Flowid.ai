@@ -752,6 +752,11 @@ type MyrCostEst = {
   total_cost_myr?: number; total_cost_usd?: number;
   within_budget?: boolean; budget_notes?: string;
   cost_basis?: string;
+  equipment_basis?: string;
+  transportation_basis?: string;
+  installation_basis?: string;
+  engineering_basis?: string;
+  commissioning_basis?: string;
 };
 
 function CostsTab({ project }: { project: Project }) {
@@ -766,11 +771,11 @@ function CostsTab({ project }: { project: Project }) {
   const total = est.total_cost_myr ?? est.total_cost_usd ?? 0;
 
   const rows = [
-    { label: 'Equipment', value: equip, color: 'bg-blue-500' },
-    { label: 'Transportation & Logistics', value: transport, color: 'bg-orange-500' },
-    { label: 'Installation', value: install, color: 'bg-purple-500' },
-    { label: 'Engineering', value: eng, color: 'bg-cyan-500' },
-    { label: 'Commissioning & Start-up', value: comm, color: 'bg-green-500' },
+    { label: 'Equipment', value: equip, color: 'bg-blue-500', basis: est.equipment_basis },
+    { label: 'Transportation & Logistics', value: transport, color: 'bg-orange-500', basis: est.transportation_basis },
+    { label: 'Installation', value: install, color: 'bg-purple-500', basis: est.installation_basis },
+    { label: 'Engineering', value: eng, color: 'bg-cyan-500', basis: est.engineering_basis },
+    { label: 'Commissioning & Start-up', value: comm, color: 'bg-green-500', basis: est.commissioning_basis },
   ].filter((r) => r.value > 0);
 
   const budgetUsed = total > 0 ? (total / project.input.budget) * 100 : 0;
@@ -803,7 +808,7 @@ function CostsTab({ project }: { project: Project }) {
       </div>
 
       <SectionCard title="Cost Breakdown">
-        <div className="space-y-2">
+        <div className="space-y-4">
           {rows.map((row) => {
             const pct = total > 0 ? (row.value / total) * 100 : 0;
             return (
@@ -818,6 +823,11 @@ function CostsTab({ project }: { project: Project }) {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+                {row.basis && (
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                    {row.basis}
+                  </p>
+                )}
               </div>
             );
           })}

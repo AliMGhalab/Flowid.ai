@@ -141,10 +141,15 @@ export interface PipingSpec {
 
 export interface CostEstimate {
   equipment_cost_myr?: number;
+  equipment_basis?: string;
   transportation_cost_myr?: number;
+  transportation_basis?: string;
   installation_cost_myr?: number;
+  installation_basis?: string;
   engineering_cost_myr?: number;
+  engineering_basis?: string;
   commissioning_cost_myr?: number;
+  commissioning_basis?: string;
   total_cost_myr?: number;
   // legacy USD fallback
   equipment_cost_usd?: number;
@@ -154,7 +159,7 @@ export interface CostEstimate {
   total_cost_usd?: number;
   within_budget: boolean;
   budget_notes: string;
-  cost_basis?: string;  // Server-added: explains how equipment cost was derived (from BOM sum, etc.)
+  cost_basis?: string;  // overall cost basis note (legacy / fallback)
 }
 
 export interface LivePriceResult {

@@ -721,14 +721,19 @@ function cleanRecommendation(rec: Record<string, unknown>): Record<string, unkno
 
 interface CostEstimate {
   equipment_cost_myr?: number;
+  equipment_basis?: string;
   transportation_cost_myr?: number;
+  transportation_basis?: string;
   installation_cost_myr?: number;
+  installation_basis?: string;
   engineering_cost_myr?: number;
+  engineering_basis?: string;
   commissioning_cost_myr?: number;
+  commissioning_basis?: string;
   total_cost_myr?: number;
   within_budget?: boolean;
   budget_notes?: string;
-  cost_basis?: string;
+  cost_basis?: string;  // legacy / overall basis note
 }
 
 function reconcileCosts(rec: Record<string, unknown>): void {
@@ -752,23 +757,96 @@ function reconcileCosts(rec: Record<string, unknown>): void {
     ? Math.abs(aiClaimedEquipment - equipmentSum) / Math.max(aiClaimedEquipment, equipmentSum)
     : 1;
 
-  // If AI's equipment number drifts > 5% from BOM sum, OVERRIDE with truth from BOM
+  const componentCount = components.length;
+  ce.equipment_cost_myr = Math.round(equipmentSum);
+
+  // EQUIPMENT BASIS
   if (drift > 0.05) {
     console.warn(`[reconcile] equipment cost mismatch — AI: RM ${aiClaimedEquipment.toLocaleString()} vs BOM sum: RM ${equipmentSum.toLocaleString()} (${(drift * 100).toFixed(1)}% drift). Overriding with BOM sum.`);
-    ce.equipment_cost_myr = Math.round(equipmentSum);
-    ce.cost_basis = `Equipment cost auto-calculated as sum of ${components.length} BOM items (AI's original estimate of RM ${aiClaimedEquipment.toLocaleString()} was off by ${(drift * 100).toFixed(0)}%).`;
+    ce.equipment_basis = `Sum of ${componentCount} BOM line items (verified server-side). AI's original estimate was off by ${(drift * 100).toFixed(0)}% — overridden with actual BOM total.`;
   } else {
-    ce.equipment_cost_myr = Math.round(equipmentSum);
-    ce.cost_basis = `Equipment cost = sum of ${components.length} BOM items.`;
+    ce.equipment_basis = `Sum of ${componentCount} BOM line items at quoted Malaysian supplier prices (verified server-side).`;
   }
 
-  // Keep AI's other line items but recompute the total
-  const transport = ce.transportation_cost_myr ?? 0;
-  const install = ce.installation_cost_myr ?? 0;
-  const engineering = ce.engineering_cost_myr ?? 0;
-  const commissioning = ce.commissioning_cost_myr ?? 0;
+  // Helper to compute or default a percentage-based cost line
+  function deriveLine(
+    rawValue: number | undefined,
+    defaultPct: number,
+    lineName: string,
+    rationale: string,
+  ): { value: number; basis: string } {
+    const equipment = ce.equipment_cost_myr ?? 0;
+    let value = rawValue ?? 0;
+    let pctText: string;
+    let source: string;
 
-  const recomputedTotal = ce.equipment_cost_myr + transport + install + engineering + commissioning;
+    if (value > 0 && equipment > 0) {
+      const pct = (value / equipment) * 100;
+      // If AI's number is wildly out of typical range, fall back to default percentage
+      const typicalLow = defaultPct * 0.4;
+      const typicalHigh = defaultPct * 2.0;
+      if (pct < typicalLow || pct > typicalHigh) {
+        value = Math.round(equipment * (defaultPct / 100));
+        pctText = `${defaultPct.toFixed(1)}% of equipment cost`;
+        source = `AI estimate was outside typical ${typicalLow.toFixed(0)}–${typicalHigh.toFixed(0)}% range — replaced with industry-standard default. ${rationale}`;
+      } else {
+        pctText = `${pct.toFixed(1)}% of equipment cost`;
+        source = rationale;
+      }
+    } else {
+      // No AI value — generate from default
+      value = Math.round(equipment * (defaultPct / 100));
+      pctText = `${defaultPct.toFixed(1)}% of equipment cost`;
+      source = `Industry-standard estimate. ${rationale}`;
+    }
+    return {
+      value,
+      basis: `${pctText} (RM ${value.toLocaleString('en-MY')}). ${source}`,
+    };
+  }
+
+  // TRANSPORTATION
+  const transport = deriveLine(
+    ce.transportation_cost_myr,
+    10,
+    'Transportation',
+    'Covers logistics from supplier cities (Klang Valley / PJ) to project site. East Malaysia projects include 10–15% air/sea freight premium.',
+  );
+  ce.transportation_cost_myr = transport.value;
+  ce.transportation_basis = transport.basis;
+
+  // INSTALLATION
+  const install = deriveLine(
+    ce.installation_cost_myr,
+    20,
+    'Installation',
+    'Mechanical erection, piping fabrication, electrical termination, instrument hook-up, and pre-commissioning by Malaysian contractor.',
+  );
+  ce.installation_cost_myr = install.value;
+  ce.installation_basis = install.basis;
+
+  // ENGINEERING
+  const engineering = deriveLine(
+    ce.engineering_cost_myr,
+    12,
+    'Engineering',
+    'Detailed design, P&ID development, equipment data sheets, site supervision, and as-built documentation.',
+  );
+  ce.engineering_cost_myr = engineering.value;
+  ce.engineering_basis = engineering.basis;
+
+  // COMMISSIONING
+  const commissioning = deriveLine(
+    ce.commissioning_cost_myr,
+    5,
+    'Commissioning',
+    'System flushing, pressure testing, fluid loading, control loop tuning, operator training, and performance verification.',
+  );
+  ce.commissioning_cost_myr = commissioning.value;
+  ce.commissioning_basis = commissioning.basis;
+
+  // RECOMPUTED TOTAL — always sum from the (now-verified) breakdown
+  const recomputedTotal = ce.equipment_cost_myr + transport.value + install.value + engineering.value + commissioning.value;
   ce.total_cost_myr = Math.round(recomputedTotal);
 
   rec.cost_estimate = ce as unknown as Record<string, unknown>;

@@ -2,6 +2,7 @@ import { HeroCTAs, BottomCTA } from '@/components/HomeCTAs';
 import {
   Package,
   ShieldAlert,
+  ShieldCheck,
   Wrench,
   DollarSign,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   Zap,
   RefreshCw,
+  GitBranch,
   X,
   AlertTriangle,
   Users,
@@ -49,28 +51,44 @@ const FEATURES = [
     bg: 'bg-blue-400/10',
   },
   {
+    icon: GitBranch,
+    title: 'Process Flow Diagram (P&ID)',
+    description:
+      'Auto-generated P&ID-style schematic showing equipment connections in physical flow order — from source through pumps, valves, instruments, to destination. Downloadable as SVG for any tool.',
+    color: 'text-violet-400',
+    bg: 'bg-violet-400/10',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Server-Side Validation',
+    description:
+      '12 integrity checks run on every project: engineering math re-verified (NPSH, Reynolds, motor sizing), cost reconciled against BOM, material compatibility checked, HAZOP coverage audited.',
+    color: 'text-teal-400',
+    bg: 'bg-teal-400/10',
+  },
+  {
     icon: ShieldAlert,
     title: 'HAZOP Risk Register',
     description:
-      'Automated hazard identification covering mechanical, chemical, thermal, and operational risks with DOSH and BOMBA mitigation guidance built in.',
+      'Structured hazard analysis with required guideword coverage (NO FLOW, MORE PRESSURE, LEAK, ELECTRICAL FAULT). Server-side check flags missing guidewords before sign-off.',
     color: 'text-orange-400',
     bg: 'bg-orange-400/10',
   },
   {
-    icon: Wrench,
-    title: 'Maintenance Schedules',
-    description:
-      'Structured preventive maintenance from daily checks to annual overhauls, with estimated durations and shutdown requirements flagged for planning.',
-    color: 'text-green-400',
-    bg: 'bg-green-400/10',
-  },
-  {
     icon: DollarSign,
-    title: 'Full Cost Breakdown',
+    title: 'AACE Cost Methodology',
     description:
-      'Equipment, installation, engineering, commissioning, and transportation costs in MYR — calculated from supplier city to your project state and compared against your budget.',
+      'Class 4–5 feasibility estimates per AACE International standards. Equipment cost = verified BOM sum. Lang Factor Method applied for installation, engineering, commissioning. Every line cites its source.',
     color: 'text-purple-400',
     bg: 'bg-purple-400/10',
+  },
+  {
+    icon: Wrench,
+    title: 'Engineer Action Plan',
+    description:
+      'Every project ships with a "What to Revise" checklist auto-generated from validation results and low-confidence flags — plus a 4-step PE workflow from review to stamp.',
+    color: 'text-green-400',
+    bg: 'bg-green-400/10',
   },
   {
     icon: BarChart3,
@@ -92,7 +110,7 @@ const FEATURES = [
     icon: FileDown,
     title: 'PDF & Excel Export',
     description:
-      'A professional 11-section engineering report as PDF, or a 7-sheet Excel workbook with BOM, risk register, cost summary, and maintenance schedule.',
+      'A professional 12-section engineering report as PDF (with engineering calculations, cost basis, and HAZOP), or a 7-sheet Excel workbook with the full BOM and risk register.',
     color: 'text-rose-400',
     bg: 'bg-rose-400/10',
   },
@@ -100,7 +118,7 @@ const FEATURES = [
     icon: MapPin,
     title: 'Malaysian Suppliers Only',
     description:
-      'Suppliers selected by proximity to your project state — from Klang Valley to Kerteh to Kota Kinabalu. Logistics costs calculated automatically.',
+      'Suppliers selected by proximity to your project state — from Klang Valley to Kerteh to Kota Kinabalu. Logistics costs calculated with East Malaysia premium where applicable.',
     color: 'text-emerald-400',
     bg: 'bg-emerald-400/10',
   },
@@ -115,15 +133,21 @@ const STEPS = [
   },
   {
     number: '02',
-    title: 'AI Engineers the System',
+    title: 'Multi-Agent AI Pipeline',
     description:
-      'Flowid.ai determines process parameters, builds a complete P&ID-style component list, selects real Malaysian suppliers by location, applies DOSH / BOMBA / SIRIM compliance, and calculates transportation costs.',
+      'Six specialised agents work the problem: Planner sets process parameters, BOM Agent picks Malaysian suppliers, Hydraulics Agent runs NPSH/Reynolds/motor sizing, HAZOP Agent applies guidewords, Cost Agent rolls up MYR pricing, P&ID Agent builds the flow diagram.',
   },
   {
     number: '03',
-    title: 'Review, Export & Procure',
+    title: 'Server-Side Validation',
     description:
-      'Browse the full BOM, risk register, and cost breakdown. Check live supplier prices. Export a PDF engineering report or Excel BOM for procurement — in under 4 minutes total.',
+      '12 integrity checks run automatically: engineering math re-verified against formulas, cost reconciled against BOM, material compatibility checked, HAZOP coverage audited, P&ID connectivity verified.',
+  },
+  {
+    number: '04',
+    title: 'Engineer Reviews & Stamps',
+    description:
+      'You receive the validation audit, BOM, P&ID, risk register, and a "what to revise" checklist. PE reviews, modifies, and stamps before procurement — Flowid.ai compresses the documentation work, the engineering judgement stays with the licensed PE.',
   },
 ];
 
@@ -201,16 +225,21 @@ const COMPARISON = [
 const OUTPUTS = [
   'Complete BOM — every pump, valve, strainer, instrument, fitting, MCC panel, and structural item',
   'Process parameters — flow rate, pressure, temperature, velocity (AI-determined from your application)',
+  'Engineering calculations — NPSH, total dynamic head, Reynolds number, friction factor, pump shaft power, motor sizing (server-verified against formulas)',
+  'Process Flow Diagram (P&ID) — visual schematic, downloadable as SVG',
   'Malaysian supplier names and MYR pricing for every line item',
   'Transportation cost from supplier city to your project state',
-  'HAZOP risk register with likelihood, severity, and mitigation actions',
+  'HAZOP risk register with required guideword coverage and mitigation actions',
+  'AACE Class 4–5 cost methodology — every cost line cites its source (BOM sum, Lang Factor, etc.)',
   'Preventive maintenance schedule (daily through annual, with shutdown flags)',
   'Piping specification — material, schedule, connection type, insulation',
-  'Instrumentation list with ISA tag numbers (PT, FT, TT, LT)',
+  'Instrumentation list with ISA tag numbers (FT, PT, TT, LT, AT)',
   'DOSH, BOMBA, SIRIM, PETRONAS PTS, DOE compliance standards',
+  'Server-side validation audit — 12 integrity checks visible to the engineer',
+  '"What to Revise" checklist auto-generated for engineer review',
   'Recommended vendors ranked by proximity to your state',
   'AI confidence score and expected service lifespan per component',
-  'Exportable as 11-section PDF report or 7-sheet Excel BOM workbook',
+  'Exportable as 12-section PDF engineering report or 7-sheet Excel BOM workbook',
 ];
 
 const MOCK_COMPONENTS = [
@@ -590,11 +619,11 @@ export default function LandingPage() {
                 body: 'Risk assessment follows HAZOP principles — each hazard has a cause, consequence, likelihood, severity, existing safeguard, and mitigation action. Not a generic warning list.',
               },
               {
-                icon: RefreshCw,
-                color: 'text-green-400',
-                bg: 'bg-green-400/10',
-                title: 'Validated Output Every Time',
-                body: 'Every response is validated for completeness before being saved. If the AI returns an incomplete specification, Flowid.ai retries automatically — you never get a half-finished report.',
+                icon: ShieldCheck,
+                color: 'text-teal-400',
+                bg: 'bg-teal-400/10',
+                title: '12-Check Server-Side Audit',
+                body: 'Every project passes through 12 integrity checks: engineering math re-verified against formulas (NPSH, Reynolds, motor sizing), cost reconciled against BOM, material compatibility validated, HAZOP coverage audited. Findings shown to the engineer.',
               },
               {
                 icon: Zap,

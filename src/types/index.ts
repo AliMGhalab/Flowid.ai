@@ -188,6 +188,12 @@ export interface ProcessFlow {
   edges: ProcessFlowEdge[];
 }
 
+export interface ValidationWarning {
+  code: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+}
+
 export interface FluidSystemRecommendation {
   summary: string;
   system_type: string;
@@ -210,6 +216,7 @@ export interface FluidSystemRecommendation {
   lead_time_weeks: number;
   recommended_vendors: Vendor[];
   engineering_notes: string;
+  validation_warnings?: ValidationWarning[];  // Server-side audit results, persisted with project
 }
 
 export interface Project {

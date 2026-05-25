@@ -264,13 +264,13 @@ export default function LandingPage() {
             </h1>
 
             <p className="mx-auto mb-3 max-w-2xl text-lg leading-relaxed text-slate-300 sm:text-xl">
-              Describe your project. Get a complete, procurement-ready fluid system specification —
-              full BOM, MYR pricing from real Malaysian suppliers, HAZOP risk register,
-              DOSH &amp; BOMBA compliance, and a PDF engineering report.
+              Describe your project. Get a feasibility-grade fluid system specification —
+              full BOM, MYR pricing from Malaysian suppliers, HAZOP risk register,
+              P&amp;ID diagram, server-verified engineering calculations, and a PDF engineering report.
             </p>
             <p className="mx-auto mb-10 max-w-xl text-sm text-slate-500">
-              For plant engineers, project managers, and EPC contractors across Malaysia.
-              No credit card required.
+              Built for plant engineers, project managers, and EPC contractors across Malaysia.
+              AACE Class 4–5 estimate · PE review required before procurement.
             </p>
 
             <HeroCTAs />
@@ -425,7 +425,9 @@ export default function LandingPage() {
       <section className="border-y border-slate-800 bg-slate-900/40">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">How It Works</h2>
+            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">
+              How It <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Works</span>
+            </h2>
             <p className="text-slate-400">From description to full engineering package in 3 steps</p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3">
@@ -549,7 +551,9 @@ export default function LandingPage() {
       <section className="border-t border-slate-800">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
-            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">Built for Engineering Reliability</h2>
+            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">
+              Built for <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Engineering Reliability</span>
+            </h2>
             <p className="mx-auto max-w-xl text-slate-400">
               Flowid.ai is not a generic chatbot asked to write a BOM. It is a structured engineering
               tool designed around how real fluid systems are specified.
@@ -616,7 +620,9 @@ export default function LandingPage() {
       <section className="border-t border-slate-800 bg-slate-900/20">
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">Meet the Team</h2>
+            <h2 className="mb-3 text-3xl font-bold sm:text-4xl">
+              Meet the <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Team</span>
+            </h2>
             <p className="mx-auto max-w-xl text-slate-400">
               Built in Malaysia by engineers who&apos;ve seen first-hand how long fluid system
               specification really takes — and what it costs.
@@ -703,7 +709,7 @@ export default function LandingPage() {
       <section className="border-t border-slate-800">
         <div className="mx-auto max-w-4xl px-4 py-24 text-center sm:px-6 lg:px-8">
           <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-            Ready to Generate Your First System?
+            Ready to <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Generate</span> Your First System?
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-slate-400">
             No credit card. No setup. Describe your project and get a full

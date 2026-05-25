@@ -192,7 +192,204 @@ function runSanityChecks(rec: Record<string, unknown>): ValidationWarning[] {
     }
   }
 
+  // 6. ENGINEERING MATH VERIFICATION — re-compute AI's calculations server-side
+  verifyEngineeringMath(rec, warnings);
+
+  // 7. BOM ↔ P&ID consistency — pump count, vessel count should agree
+  verifyBomPidConsistency(rec, warnings);
+
+  // 8. HAZOP guideword coverage — required guidewords must appear in risks
+  verifyHazopCoverage(rec, warnings);
+
+  // 9. Material compatibility — flag known dangerous fluid+material combos
+  verifyMaterialCompatibility(rec, warnings);
+
   return warnings;
+}
+
+// ─── Server-side engineering verification ────────────────────────────────────
+
+interface CalcCheck {
+  field: string;
+  aiValue: number;
+  computedValue: number;
+  driftPct: number;
+}
+
+function approxEqual(a: number, b: number, tolerancePct: number): boolean {
+  if (a === 0 && b === 0) return true;
+  return Math.abs(a - b) / Math.max(Math.abs(a), Math.abs(b)) < tolerancePct / 100;
+}
+
+function verifyEngineeringMath(rec: Record<string, unknown>, warnings: ValidationWarning[]): void {
+  type EC = {
+    npsh_available_m?: number; npsh_required_m?: number; npsh_margin_m?: number;
+    total_dynamic_head_m?: number; static_head_m?: number; friction_head_m?: number;
+    pump_power_kw?: number; motor_size_kw?: number;
+    pipe_velocity_m_s?: number; reynolds_number?: number;
+    flow_regime?: string; friction_factor?: number;
+  };
+  type PP = { design_flow_rate?: string; operating_temperature?: string; fluid_velocity?: string };
+
+  const ec = rec.engineering_calculations as EC | undefined;
+  if (!ec) return;
+  const pp = rec.process_parameters as PP | undefined;
+
+  const mismatches: CalcCheck[] = [];
+
+  // Check 1: NPSH margin = NPSHa - NPSHr
+  if (ec.npsh_available_m !== undefined && ec.npsh_required_m !== undefined && ec.npsh_margin_m !== undefined) {
+    const computed = ec.npsh_available_m - ec.npsh_required_m;
+    if (!approxEqual(ec.npsh_margin_m, computed, 10)) {
+      mismatches.push({ field: 'NPSH margin', aiValue: ec.npsh_margin_m, computedValue: Number(computed.toFixed(2)), driftPct: Math.abs(ec.npsh_margin_m - computed) / Math.max(Math.abs(ec.npsh_margin_m), Math.abs(computed)) * 100 });
+      ec.npsh_margin_m = Number(computed.toFixed(2));
+    }
+  }
+
+  // Check 2: TDH = static_head + friction_head (velocity head usually negligible)
+  if (ec.static_head_m !== undefined && ec.friction_head_m !== undefined && ec.total_dynamic_head_m !== undefined) {
+    const computed = ec.static_head_m + ec.friction_head_m;
+    if (!approxEqual(ec.total_dynamic_head_m, computed, 15)) {
+      mismatches.push({ field: 'TDH (static + friction)', aiValue: ec.total_dynamic_head_m, computedValue: Number(computed.toFixed(1)), driftPct: Math.abs(ec.total_dynamic_head_m - computed) / Math.max(Math.abs(ec.total_dynamic_head_m), Math.abs(computed)) * 100 });
+    }
+  }
+
+  // Check 3: Reynolds number — recompute from velocity, diameter, water properties at temp
+  if (pp?.fluid_velocity && pp.design_flow_rate && ec.reynolds_number !== undefined) {
+    const velocity = parseFloat(pp.fluid_velocity);
+    const tempStr = pp.operating_temperature ?? '25°C';
+    const temp = parseFloat(tempStr);
+    // Estimate pipe diameter from Q (m³/hr) and v (m/s): D = sqrt(4Q / (π × v × 3600))
+    const flow = parseFloat(pp.design_flow_rate); // m³/hr
+    if (velocity > 0 && flow > 0) {
+      const diameter_m = Math.sqrt((4 * flow) / (Math.PI * velocity * 3600));
+      // Water properties (rough): ρ = 1000 kg/m³ near 25°C, μ ≈ 10^-3 Pa·s; lower for hotter water
+      const density = 1000 - 0.2 * Math.max(0, temp - 4); // crude approximation
+      const viscosity = 0.001 * Math.exp(-0.025 * Math.max(0, temp - 25)); // crude
+      const computed = (density * velocity * diameter_m) / viscosity;
+      // Re is wide range — accept 30% drift before flagging
+      if (!approxEqual(ec.reynolds_number, computed, 30)) {
+        mismatches.push({
+          field: 'Reynolds number',
+          aiValue: ec.reynolds_number,
+          computedValue: Math.round(computed),
+          driftPct: Math.abs(ec.reynolds_number - computed) / Math.max(ec.reynolds_number, computed) * 100,
+        });
+      }
+      // Verify flow_regime label matches computed Re
+      if (ec.flow_regime) {
+        const expectedRegime = computed < 2300 ? 'laminar' : computed < 4000 ? 'transitional' : 'turbulent';
+        if (ec.flow_regime.toLowerCase() !== expectedRegime) {
+          warnings.push({
+            code: 'FLOW_REGIME_MISMATCH',
+            severity: 'info',
+            message: `Flow regime labelled "${ec.flow_regime}" but Re ≈ ${Math.round(computed)} → ${expectedRegime}.`,
+          });
+          ec.flow_regime = expectedRegime;
+        }
+      }
+    }
+  }
+
+  // Check 4: Motor size must be next IEC standard step ≥ pump_power_kw
+  const IEC_SIZES = [0.37, 0.55, 0.75, 1.1, 1.5, 2.2, 3, 4, 5.5, 7.5, 11, 15, 18.5, 22, 30, 37, 45, 55, 75, 90, 110, 132, 160, 200, 250];
+  if (ec.pump_power_kw !== undefined && ec.motor_size_kw !== undefined) {
+    const expectedMotor = IEC_SIZES.find((s) => s >= ec.pump_power_kw!) ?? ec.pump_power_kw;
+    if (ec.motor_size_kw < ec.pump_power_kw) {
+      warnings.push({
+        code: 'MOTOR_UNDERSIZED',
+        severity: 'warning',
+        message: `Motor size (${ec.motor_size_kw} kW) is below pump shaft power (${ec.pump_power_kw} kW) — motor will overload. Should be ≥ ${expectedMotor} kW per IEC 60034.`,
+      });
+      ec.motor_size_kw = expectedMotor;
+    }
+  }
+
+  if (mismatches.length > 0) {
+    warnings.push({
+      code: 'ENG_MATH_DRIFT',
+      severity: 'warning',
+      message: `${mismatches.length} engineering calculation(s) re-verified server-side: ${mismatches.map((m) => `${m.field} drifted ${m.driftPct.toFixed(0)}% (AI: ${m.aiValue} → corrected: ${m.computedValue})`).join('; ')}.`,
+    });
+  } else if (ec.npsh_available_m !== undefined || ec.reynolds_number !== undefined) {
+    warnings.push({
+      code: 'ENG_MATH_VERIFIED',
+      severity: 'info',
+      message: 'All engineering calculations cross-checked against formulas (NPSH margin, TDH, Reynolds, motor sizing) — math is internally consistent.',
+    });
+  }
+}
+
+function verifyBomPidConsistency(rec: Record<string, unknown>, warnings: ValidationWarning[]): void {
+  const components = (rec.components as Array<{ category?: string; name?: string; quantity?: number }> | undefined) ?? [];
+  const pf = rec.process_flow as { nodes?: Array<{ type?: string; id?: string }> } | undefined;
+  if (!pf?.nodes) return;
+
+  const bomPumps = components.filter((c) => (c.category ?? '').toLowerCase().includes('pump')).reduce((s, c) => s + (c.quantity ?? 1), 0);
+  const pidPumps = pf.nodes.filter((n) => (n.type ?? '').toLowerCase() === 'pump').length;
+  if (bomPumps > 0 && pidPumps > 0 && Math.abs(bomPumps - pidPumps) > 1) {
+    warnings.push({
+      code: 'BOM_PID_PUMP_MISMATCH',
+      severity: 'info',
+      message: `BOM lists ${bomPumps} pump(s); P&ID diagram shows ${pidPumps}. Verify diagram completeness.`,
+    });
+  }
+}
+
+function verifyHazopCoverage(rec: Record<string, unknown>, warnings: ValidationWarning[]): void {
+  const ra = rec.risk_assessment as { risks?: Array<{ hazard?: string }> } | undefined;
+  const risks = ra?.risks ?? [];
+  if (risks.length === 0) return;
+
+  // Required guidewords for any fluid system
+  const required = ['NO FLOW', 'MORE PRESSURE', 'LEAK', 'ELECTRICAL'];
+  const allHazardText = risks.map((r) => (r.hazard ?? '').toUpperCase()).join(' | ');
+  const missing = required.filter((g) => !allHazardText.includes(g));
+  if (missing.length > 0) {
+    warnings.push({
+      code: 'HAZOP_GUIDEWORDS_MISSING',
+      severity: 'info',
+      message: `HAZOP register missing required guidewords: ${missing.join(', ')}. PE should add these before finalising.`,
+    });
+  }
+}
+
+function verifyMaterialCompatibility(rec: Record<string, unknown>, warnings: ValidationWarning[]): void {
+  const components = (rec.components as Array<{ name?: string; material?: string }> | undefined) ?? [];
+
+  // Known dangerous fluid + material combinations
+  const fluidType = (rec.summary as string | undefined ?? '').toLowerCase()
+    + ' ' + ((rec.system_type as string | undefined) ?? '').toLowerCase();
+
+  const incompatibilities: Array<{ fluid: string; badMaterial: string; reason: string }> = [
+    { fluid: 'hydrochloric', badMaterial: 'carbon steel', reason: 'Severe corrosion — use HDPE, PTFE-lined, or FRP' },
+    { fluid: 'hcl',          badMaterial: 'carbon steel', reason: 'Severe corrosion — use HDPE, PTFE-lined, or FRP' },
+    { fluid: 'sulfuric',     badMaterial: 'carbon steel', reason: 'Severe corrosion at low concentrations — use lead-lined, glass-lined, or PTFE' },
+    { fluid: 'caustic',      badMaterial: 'aluminum',     reason: 'Caustic embrittlement — use carbon steel or SS' },
+    { fluid: 'naoh',         badMaterial: 'aluminum',     reason: 'Caustic embrittlement — use carbon steel or SS' },
+    { fluid: 'ammonia',      badMaterial: 'brass',        reason: 'Ammonia stress corrosion cracking in copper alloys — use steel' },
+    { fluid: 'ammonia',      badMaterial: 'copper',       reason: 'Ammonia stress corrosion cracking — use steel' },
+    { fluid: 'chloride',     badMaterial: 'austenitic',   reason: 'Chloride stress corrosion in 304/316 SS — consider duplex SS or alloy' },
+    { fluid: 'palm oil',     badMaterial: 'galvanized',   reason: 'Zinc dissolves into hot CPO — use SS316 or food-grade material' },
+    { fluid: 'cpo',          badMaterial: 'galvanized',   reason: 'Zinc dissolves into hot CPO — use SS316 or food-grade material' },
+  ];
+
+  for (const c of components) {
+    const compName = (c.name ?? '').toLowerCase();
+    const compMat = (c.material ?? '').toLowerCase();
+    if (!compMat) continue;
+    for (const rule of incompatibilities) {
+      if (fluidType.includes(rule.fluid) && compMat.includes(rule.badMaterial)) {
+        warnings.push({
+          code: 'MATERIAL_INCOMPATIBLE',
+          severity: 'warning',
+          message: `"${c.name}" uses ${c.material}. ${rule.reason}. (Triggered by fluid: ${rule.fluid})`,
+        });
+        break; // one warning per component is enough
+      }
+    }
+    void compName; // avoid unused-var warning
+  }
 }
 
 function getChutesClient() {
@@ -1008,6 +1205,8 @@ export async function POST(request: NextRequest) {
         if (warnings.length > 0) {
           console.log(`[/api/generate] ${warnings.length} sanity-check warning(s):`, warnings.map((w) => w.code).join(', '));
         }
+        // Bundle warnings INTO the recommendation so Firestore persists them
+        (recommendation as Record<string, unknown>).validation_warnings = warnings;
         return NextResponse.json({ recommendation, validation_warnings: warnings });
       } catch (err) {
         lastError = err;

@@ -8,6 +8,8 @@ import { getProject } from '@/lib/firestore';
 import type { Project, SystemComponent, Instrument, Risk, MaintenanceSchedule, LivePriceResult, ComponentAlternative } from '@/types';
 import { getFluidLabel } from '@/lib/fluidLabels';
 import ProcessFlowDiagram from '@/components/ProcessFlowDiagram';
+import ValidationNotes from '@/components/ValidationNotes';
+import type { ValidationWarning } from '@/types';
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -135,8 +137,12 @@ function SectionCard({ title, children }: { title?: string; children: React.Reac
 
 function OverviewTab({ project }: { project: Project }) {
   const rec = project.recommendation!;
+  const warnings = (rec as { validation_warnings?: ValidationWarning[] }).validation_warnings ?? [];
   return (
     <div className="space-y-4">
+      {/* Server-side validation audit — visible proof the system self-checks */}
+      <ValidationNotes warnings={warnings} />
+
       <SectionCard title="System Overview">
         <p className="mb-4 text-slate-300 leading-relaxed">{rec.summary}</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

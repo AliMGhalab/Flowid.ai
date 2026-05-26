@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
-import { Droplets, LayoutDashboard, Plus, LogOut, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Plus, LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 export default function Navbar() {
@@ -39,9 +40,14 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <Droplets className="h-5 w-5 text-white" />
-            </div>
+            <Image
+              src="/logo.jpg"
+              alt="Flowid.ai"
+              width={36}
+              height={36}
+              className="rounded-lg"
+              priority
+            />
             <span className="text-lg font-bold tracking-tight text-white">
               Flowid<span className="text-blue-400">.ai</span>
             </span>

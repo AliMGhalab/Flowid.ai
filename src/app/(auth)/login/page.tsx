@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { Droplets, Mail, Lock, Chrome } from 'lucide-react';
+import Image from 'next/image';
+import { Mail, Lock, Chrome } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -51,9 +52,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600">
-            <Droplets className="h-7 w-7 text-white" />
-          </div>
+          <Image
+            src="/logo.jpg"
+            alt="Flowid.ai"
+            width={56}
+            height={56}
+            className="mx-auto mb-4 rounded-2xl"
+            priority
+          />
           <h1 className="text-2xl font-bold text-white">Welcome back</h1>
           <p className="mt-1 text-slate-400">Your engineering reports are saved and waiting</p>
         </div>

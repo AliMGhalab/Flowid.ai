@@ -933,6 +933,32 @@ interface CostEstimate {
   cost_basis?: string;  // legacy / overall basis note
 }
 
+// Rewrite the budget_notes line based on the user's actual input budget and
+// the server-reconciled total. The AI's original text often cites its
+// pre-reconciliation numbers and contradicts the displayed total.
+function rewriteBudgetNotes(rec: Record<string, unknown>, input: ProjectInput): void {
+  const ce = rec.cost_estimate as CostEstimate | undefined;
+  if (!ce) return;
+  const total = ce.total_cost_myr ?? 0;
+  const budget = input.budget;
+  if (!budget || !total) return;
+
+  const fmt = (n: number) => 'RM ' + n.toLocaleString('en-MY', { maximumFractionDigits: 0 });
+  const diff = total - budget;
+  const pctOver = (total / budget - 1) * 100;
+  ce.within_budget = total <= budget;
+
+  if (diff > 0) {
+    ce.budget_notes = `Exceeds ${fmt(budget)} budget by ${fmt(diff)} (${pctOver.toFixed(1)}% over). Per AACE Class 4–5 methodology, this estimate has ±30–50% accuracy — supplier quotations may reduce final spend. Consider value engineering on equipment selection or reducing scope.`;
+  } else if (diff < 0) {
+    ce.budget_notes = `Within ${fmt(budget)} budget. ${fmt(Math.abs(diff))} headroom (${Math.abs(pctOver).toFixed(1)}% under). AACE Class 4–5 estimate has ±30–50% accuracy — keep contingency for design refinement.`;
+  } else {
+    ce.budget_notes = `On budget at exactly ${fmt(budget)}. AACE Class 4–5 estimate has ±30–50% accuracy.`;
+  }
+
+  rec.cost_estimate = ce as unknown as Record<string, unknown>;
+}
+
 function reconcileCosts(rec: Record<string, unknown>): void {
   // Sum equipment from real components
   const components = (rec.components as Array<{ total_cost_myr?: number; unit_cost_myr?: number; quantity?: number }> | undefined) ?? [];
@@ -1201,6 +1227,9 @@ export async function POST(request: NextRequest) {
     for (const cfg of models) {
       try {
         const recommendation = await generateWithModel(input, cfg);
+        // Rewrite budget_notes from the actual reconciled total + user's budget,
+        // since the AI's original text often references its pre-reconciled numbers.
+        rewriteBudgetNotes(recommendation, input);
         const warnings = runSanityChecks(recommendation);
         if (warnings.length > 0) {
           console.log(`[/api/generate] ${warnings.length} sanity-check warning(s):`, warnings.map((w) => w.code).join(', '));

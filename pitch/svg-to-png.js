@@ -19,7 +19,7 @@ const TARGET_H =  900 * SCALE;
     const svgBuffer = fs.readFileSync(SVG_PATH);
 
     await sharp(svgBuffer, { density: 300 })   // high DPI rasterization
-      .resize(TARGET_W, TARGET_H, { fit: 'contain', background: { r: 2, g: 8, b: 23, alpha: 1 } })
+      .resize(TARGET_W, TARGET_H, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
       .png({ compressionLevel: 9, quality: 100 })
       .toFile(PNG_PATH);
 

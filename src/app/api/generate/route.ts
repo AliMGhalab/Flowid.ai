@@ -1132,6 +1132,10 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 10000 });
   }
+  // Chutes DeepSeek V3 — fourth fallback (paid tier, handles large prompts, high quality)
+  if (process.env.CHUTES_API_KEY) {
+    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 16000 });
+  }
 
   return roster;
 }

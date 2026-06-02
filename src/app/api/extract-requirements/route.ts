@@ -42,9 +42,16 @@ function getSambaNovaClient() {
     maxRetries: 0,
   });
 }
+function getChutesClient() {
+  return new OpenAI({
+    apiKey: process.env.CHUTES_API_KEY!,
+    baseURL: 'https://llm.chutes.ai/v1',
+    maxRetries: 0,
+  });
+}
 
 interface ExtractorConfig {
-  provider: 'cerebras' | 'mistral' | 'sambanova';
+  provider: 'cerebras' | 'mistral' | 'sambanova' | 'chutes';
   model: string;
   client: OpenAI;
 }
@@ -59,6 +66,9 @@ function buildExtractorChain(): ExtractorConfig[] {
   }
   if (process.env.SAMBANOVA_API_KEY) {
     chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient() });
+  }
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient() });
   }
   return chain;
 }

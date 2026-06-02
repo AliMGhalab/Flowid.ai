@@ -59,19 +59,29 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // Groq Llama 3.3 70B — PRIMARY. Custom LPU silicon = ~50ms per call (tested).
-  // Eliminates the 504-timeout problem for the agent loop entirely.
+  // ─── ORDER OPTIMISED BY: speed × reliability × infrastructure diversity ──
+  // Tested 2026-06-02: each provider's tool-calling support was verified
+  // with a sample tool. This order minimises the chance of 504 timeouts
+  // (each iteration in the agent loop is bounded by 25s).
+
+  // #1 Groq Llama 3.3 70B — 50ms per call. Different LPU silicon. PRIMARY.
   if (process.env.GROQ_API_KEY) {
     chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 6000 });
   }
+  // #2 Chutes Qwen3-32B — paid Pro account, smaller model = faster, separate infra from Mistral/SambaNova
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 6000 });
+  }
+  // #3 Mistral Large — Mistral's own infra. Good tool calling quality, ~3-6s per call.
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 6000 });
   }
+  // #4 SambaNova Llama 3.3 70B — fast hardware but frequent 429s, so 4th not 2nd
   if (process.env.SAMBANOVA_API_KEY) {
     chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 6000 });
   }
+  // #5 + #6 More Chutes models — last because shared infrastructure with #2
   if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen',     model: 'Qwen/Qwen3-32B-TEE',             client: getChutesClient(), max_tokens: 6000 });
     chain.push({ provider: 'chutes-glm',      model: 'zai-org/GLM-5.1-TEE',            client: getChutesClient(), max_tokens: 6000 });
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 6000 });
   }

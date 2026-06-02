@@ -34,34 +34,110 @@ interface ProviderConfig {
   max_tokens?: number;
 }
 
-const AGENT_SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer running as an autonomous agent.
+const AGENT_SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer running as an autonomous agent. Your job is to walk a P&ID end-to-end and produce a complete procurement-ready specification.
 
-You have access to a set of TOOLS (see the tools list). For each request, you must:
-  1. Reason about which tool to call next based on what information you still need
-  2. Call tools to get FACTS (calculations, supplier lookups, material checks)
-  3. Use the tool results to refine your design
-  4. When the design is complete, call \`finalize_design\` with the full FluidSystemRecommendation
+EXECUTION MODEL:
+You have TOOLS available. For each request:
+  1. Plan: think what you need to know next
+  2. Call a tool to get FACTS (calculations, suppliers, material checks, cost reconciliation)
+  3. Use tool results to refine your design
+  4. ONLY call finalize_design AFTER you have built a COMPLETE design
 
-Rules:
-  - Always call \`derive_process_parameters\` first to establish flow rate, pressure, temperature.
-  - Always call \`get_required_hazop_guidewords\` before writing the risk register.
-  - Always call \`check_material_compatibility\` if you specify any material for a chemical / corrosive / refrigerant fluid.
-  - Always call \`reconcile_costs_aace\` with the BOM components before finalizing — let server-side math compute the cost breakdown, not your own arithmetic.
-  - Call \`lookup_malaysian_suppliers\` at least once per component category to ground supplier names in reality.
-  - You have a maximum of 15 tool calls. Use them efficiently.
-  - When finalising, the recommendation must include: summary, system_type, design_basis, overall_confidence, process_parameters, engineering_calculations, components (≥ 10 items), piping, instrumentation (≥ 4 tags), risk_assessment (≥ 15 entries), maintenance_schedule, cost_estimate, process_flow, recommended_vendors, compliance_standards.
-  - In finalize_design.recommendation, use EXACTLY the field names listed above.
-  - Components must each have id, name, category, quantity, specification, material, supplier, model, unit_cost_myr, total_cost_myr, notes.
-  - Output language is English. All monetary values in MYR. Use Malaysian regulations (DOSH FMA 1967, BOMBA UBBL, SIRIM, PETRONAS PTS, MS Standards) where applicable.
+CRITICAL — do NOT finalize too early. A "complete" design has:
+  • components: AT LEAST 10 items. A real fluid system has ~15-25. Walk the P&ID from source to destination:
+      - rotating: duty pump + standby + seals + couplings (4-6 items)
+      - vessels: suction header, expansion vessel, etc. (1-3 items)
+      - valves: suction isolation, discharge isolation, check, PSV, control, drains (3-5 valves), vents (1-2) (8-12 valve items)
+      - piping: pipe lot + fittings lot + flange/gasket lot (2-3 items)
+      - instrumentation as BOM items: gauges, transmitters as separate component lines (3-5 items)
+      - electrical: MCC/VFD, control panel, power cables, instrument cables, earthing (4-5 items)
+      - structural: skid, supports, bund if needed (1-3 items)
+      - safety + commissioning: PSV, strainer, spares kit (2-3 items)
+  • instrumentation array: AT LEAST 4 instrument tags (FT, PT-suction, PT-discharge, TT minimum)
+  • risk_assessment.risks: AT LEAST 15 entries covering HAZOP guidewords
+  • process_flow.nodes: AT LEAST 8 nodes wired in a chain from source to destination
+  • piping spec, cost_estimate, maintenance_schedule, compliance_standards, recommended_vendors
 
-You are an AGENT, not a static prompt. Reason about what you need, call tools to get it, then act. Do not hallucinate facts you can verify with a tool.`;
+REQUIRED TOOL SEQUENCE (use as guidance, not a rigid script):
+  1. derive_process_parameters — establish flow / pressure / temperature first
+  2. calculate_hydraulics — get Re, regime, friction, pressure drop
+  3. size_pump_motor — get pump kW, motor kW, NPSH margin
+  4. get_required_hazop_guidewords — know what hazards you must cover
+  5. lookup_malaysian_suppliers — call ONCE PER CATEGORY (pump, valve, instrument, piping, vessel, electrical, safety, fitting) — that's 6-8 calls minimum
+  6. check_material_compatibility — for the dominant wetted material vs the fluid
+  7. reconcile_costs_aace — feed the FULL component list, get the cost breakdown back
+  8. ONLY THEN finalize_design with the complete recommendation
 
-const MAX_ITERATIONS = 15;
+You have up to 25 tool calls. Use them — a real engineer wouldn't size a 20-component system from a single thought.
+
+OUTPUT FIELD NAMES in finalize_design.recommendation:
+  summary, system_type, design_basis, overall_confidence, process_parameters, engineering_calculations,
+  process_flow (nodes + edges), components (id/name/category/quantity/specification/material/supplier/model/unit_cost_myr/total_cost_myr/notes/confidence_level/lifespan_years/price_basis),
+  piping (material/nominal_diameter_inch/schedule/connection_type/insulation_required/design_notes),
+  instrumentation (tag/description/type/service/range/material/supplier/unit_cost_myr),
+  risk_assessment (overall_risk_level/hazop_summary/risks[]), maintenance_schedule, compliance_standards,
+  cost_estimate (equipment/transportation/installation/engineering/commissioning/total/within_budget/budget_notes),
+  lead_time_weeks, recommended_vendors, engineering_notes.
+
+Language: English. Money: MYR. Standards: DOSH FMA 1967, BOMBA UBBL, SIRIM, PETRONAS PTS, MS Standards.
+
+You are an AGENT. Do the work. Do not shortcut the BOM.`;
+
+const MAX_ITERATIONS = 25;
 const MAX_TOOL_RESULT_SIZE = 12000; // chars — truncate huge tool outputs
 
 function truncate(s: string, max = MAX_TOOL_RESULT_SIZE): string {
   if (s.length <= max) return s;
   return s.slice(0, max) + `\n…(truncated ${s.length - max} chars)`;
+}
+
+// Verifies the agent's proposed final recommendation. If empty array, the
+// recommendation is complete enough to accept; otherwise the array lists
+// what's missing so the agent can fix it on the next iteration.
+function validateAgentRecommendation(rec: unknown): string[] {
+  const issues: string[] = [];
+  if (!rec || typeof rec !== 'object') {
+    return ['recommendation must be an object'];
+  }
+  const r = rec as Record<string, unknown>;
+
+  // Minimum coverage requirements
+  const components = Array.isArray(r.components) ? r.components : [];
+  if (components.length < 10) {
+    issues.push(`components has only ${components.length} items — need ≥10 covering all P&ID categories`);
+  }
+
+  const instrumentation = Array.isArray(r.instrumentation) ? r.instrumentation : [];
+  if (instrumentation.length < 4) {
+    issues.push(`instrumentation has only ${instrumentation.length} tags — need ≥4 (FT, PT discharge, PT suction, TT)`);
+  }
+
+  const ra = r.risk_assessment as { risks?: unknown[] } | undefined;
+  const risks = Array.isArray(ra?.risks) ? ra!.risks! : [];
+  if (risks.length < 15) {
+    issues.push(`risk_assessment.risks has only ${risks.length} entries — need ≥15 covering HAZOP guidewords`);
+  }
+
+  if (!r.piping || typeof r.piping !== 'object') {
+    issues.push('piping section is missing');
+  }
+  if (!r.cost_estimate || typeof r.cost_estimate !== 'object') {
+    issues.push('cost_estimate section is missing');
+  }
+  if (!r.summary || typeof r.summary !== 'string' || (r.summary as string).length < 30) {
+    issues.push('summary is missing or too short');
+  }
+  if (!r.system_type || typeof r.system_type !== 'string') {
+    issues.push('system_type is missing');
+  }
+
+  const pf = r.process_flow as { nodes?: unknown[] } | undefined;
+  const nodes = Array.isArray(pf?.nodes) ? pf!.nodes! : [];
+  if (nodes.length < 8) {
+    issues.push(`process_flow has only ${nodes.length} nodes — need ≥8 for a useful P&ID`);
+  }
+
+  return issues;
 }
 
 export async function runAgentLoop(
@@ -127,19 +203,33 @@ export async function runAgentLoop(
         args = {};
       }
 
-      // Special: finalize_design ends the loop
+      // Special: finalize_design — but ONLY accept if the recommendation is complete.
+      // If the agent tries to finalize prematurely, reject and tell it what's missing.
       if (fnName === 'finalize_design') {
         const rec = (args as { recommendation?: Record<string, unknown> })?.recommendation;
-        if (rec && typeof rec === 'object') {
-          finalRecommendation = rec;
+        const issues = validateAgentRecommendation(rec);
+        if (issues.length === 0 && rec) {
+          finalRecommendation = rec as Record<string, unknown>;
           finalized = true;
+          trace.tool_calls.push({ name: fnName, args, result: { status: 'finalized' } });
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify({ status: 'design finalised — loop ending' }),
+          } as OpenAI.Chat.Completions.ChatCompletionMessageParam);
+        } else {
+          // Reject the premature finalize and tell the agent to keep working
+          trace.tool_calls.push({ name: fnName, args: { _summary: 'premature finalize' }, result: { status: 'rejected', issues } });
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify({
+              status: 'REJECTED — your recommendation is incomplete. Do not call finalize_design yet.',
+              issues,
+              instruction: 'Expand the BOM to cover ALL system components (pumps with seals + couplings, suction/discharge/check/PSV/control/drain/vent valves, headers + expansion vessel, piping/fittings/supports, ALL instruments FT/PT/TT/LT, MCC + control panel + cables + earthing, skid + bund, safety devices, commissioning items). Then add ≥15 HAZOP risk entries covering the standard guidewords. Then add piping spec, instrumentation list with tags, cost_estimate, process_flow (≥10 nodes), maintenance_schedule, compliance_standards, recommended_vendors. THEN call finalize_design with the complete recommendation. Use your tools more — call lookup_malaysian_suppliers for each category, reconcile_costs_aace once you have the full BOM.',
+            }),
+          } as OpenAI.Chat.Completions.ChatCompletionMessageParam);
         }
-        trace.tool_calls.push({ name: fnName, args, result: { status: 'finalized' } });
-        messages.push({
-          role: 'tool',
-          tool_call_id: call.id,
-          content: JSON.stringify({ status: 'design finalised — loop ending' }),
-        } as OpenAI.Chat.Completions.ChatCompletionMessageParam);
         continue;
       }
 

@@ -52,22 +52,23 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // Chutes DeepSeek V3 — strongest at tool calling; user has Pro key
+  // GLM-5.1 via Chutes — best fit for tool calling, less hammered than DeepSeek
   if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
+    chain.push({ provider: 'chutes-glm',    model: 'zai-org/GLM-5.1-TEE',              client: getChutesClient(), max_tokens: 8000 });
+    chain.push({ provider: 'chutes-qwen',   model: 'Qwen/Qwen3-32B-TEE',               client: getChutesClient(), max_tokens: 8000 });
+    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 8000 });
   }
-  // Mistral Large — best Mistral model for tool calling
+  // Mistral Large — Mistral-native fallback (different infra entirely)
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // SambaNova Llama 3.3 70B — Llama has good native tool support
+  // SambaNova Llama 3.3 70B — final fallback (specialised hardware, different vendor)
   if (process.env.SAMBANOVA_API_KEY) {
     chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
   }
-  // NOTE: Cerebras intentionally excluded from agent chain — Qwen-3 doesn't
-  // support tool calling on Cerebras (404), and other models on this account
-  // (gpt-oss-120b) return content in "reasoning" field which breaks OpenAI SDK.
-  // Cerebras remains the primary provider for classic /api/generate.
+  // Cerebras intentionally excluded — Qwen-3 on Cerebras doesn't support tool
+  // calling (404), gpt-oss-120b returns content in "reasoning" field. Cerebras
+  // remains the primary provider for classic /api/generate only.
   return chain;
 }
 

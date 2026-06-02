@@ -621,7 +621,7 @@ PROCESS FLOW DIAGRAM (P&ID) — this drives a visual diagram. Quality requiremen
 - ΔP/L = f × (ρ × v²) / (2 × D), convert to bar/100m
 Use water properties at operating temperature; adjust for other fluids.
 
-Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST — fill it as completely as you can but never skip the sections above it. If you run low on tokens, truncate the BOM, NEVER skip piping/instrumentation/risks/costs/standards. Keep all text fields tight (1-2 sentences max).
+Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the BOM (components array) is the MOST IMPORTANT section — generate it COMPLETELY with 12-20 components covering every P&ID category. Place it EARLY in your output so it cannot be truncated. If you must shorten anything, shorten the engineering_notes and budget_notes text — NEVER shorten the components list. Aim for tight 1-2 sentence text fields throughout, but a complete BOM with full specs.
 {
   "summary": "2-3 sentence system overview",
   "system_type": "system classification",
@@ -636,6 +636,29 @@ Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST �
     "fluid_velocity": "2.5 m/s",
     "basis": "1-2 sentences on how values were determined"
   },
+  "components": [
+    {
+      "id": "C-001",
+      "name": "descriptive component name",
+      "category": "pump|valve|filter|vessel|fitting|electrical|safety|other",
+      "quantity": 1,
+      "specification": "full tech spec: size, rating, material, performance",
+      "material": "material of construction + reason",
+      "supplier": "real Malaysian supplier + city",
+      "model": "real model/series example",
+      "unit_cost_myr": 0,
+      "total_cost_myr": 0,
+      "notes": "selection rationale + MY compliance note",
+      "confidence_level": 85,
+      "lifespan_years": 15,
+      "lifespan_notes": "1 sentence on lifespan factors",
+      "price_basis": "e.g. 'Grundfos MY May 2026 list price'",
+      "alternatives": [
+        { "name": "alt name", "supplier": "alt MY supplier", "model": "alt model", "reason": "why viable", "unit_cost_myr": 0, "total_cost_myr": 0, "confidence_level": 78 },
+        { "name": "alt2 name", "supplier": "alt2 MY supplier", "model": "alt2 model", "reason": "why viable", "unit_cost_myr": 0, "total_cost_myr": 0, "confidence_level": 72 }
+      ]
+    }
+  ],
   "engineering_calculations": {
     "npsh_available_m": 7.2,
     "npsh_required_m": 4.5,
@@ -731,46 +754,7 @@ Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the "components" array is LAST �
   "recommended_vendors": [
     { "vendor": "Vendor Name", "specialty": "what they supply", "region": "Malaysian state", "website_hint": "vendor.com.my" }
   ],
-  "engineering_notes": "design recs, commissioning notes, MY-specific points, confidence caveats",
-  "components": [
-    {
-      "id": "C-001",
-      "name": "descriptive component name",
-      "category": "pump|valve|filter|vessel|fitting|electrical|safety|other",
-      "quantity": 1,
-      "specification": "full technical spec: size, rating, material, performance — sized to match system scale",
-      "material": "material of construction and reason",
-      "supplier": "real Malaysian supplier name and city",
-      "model": "real model/series example",
-      "unit_cost_myr": 0,
-      "total_cost_myr": 0,
-      "notes": "selection rationale, Malaysian compliance note if applicable",
-      "confidence_level": 85,
-      "lifespan_years": 15,
-      "lifespan_notes": "Expected lifespan under normal conditions; factors affecting longevity for this application",
-      "price_basis": "e.g. 'Based on Grundfos Malaysia May 2026 list price for Selangor delivery; bulk discount possible above 5 units'",
-      "alternatives": [
-        {
-          "name": "alternative component name",
-          "supplier": "alternative Malaysian supplier",
-          "model": "alternative model",
-          "reason": "why this is a viable alternative (cost saving, faster delivery, local stock, etc.)",
-          "unit_cost_myr": 0,
-          "total_cost_myr": 0,
-          "confidence_level": 78
-        },
-        {
-          "name": "second alternative component name",
-          "supplier": "second alternative Malaysian supplier",
-          "model": "second alternative model",
-          "reason": "why this is a viable alternative",
-          "unit_cost_myr": 0,
-          "total_cost_myr": 0,
-          "confidence_level": 72
-        }
-      ]
-    }
-  ]
+  "engineering_notes": "design recs, commissioning notes, MY-specific points, confidence caveats"
 }`;
 }
 

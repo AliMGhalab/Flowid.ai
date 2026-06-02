@@ -283,6 +283,22 @@ export default function NewProjectPage() {
   const [generating, setGenerating] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [agentStep, setAgentStep] = useState(0);
+  // Agentic mode toggle — when ON, calls /api/generate-agent (dynamic tool calling)
+  //                       when OFF, calls /api/generate (single-call chain — proven)
+  const [useAgentMode, setUseAgentMode] = useState(false);
+
+  // Restore the user's preference across sessions
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem('flowid:useAgentMode');
+      if (saved === '1') setUseAgentMode(true);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem('flowid:useAgentMode', useAgentMode ? '1' : '0'); } catch {}
+  }, [useAgentMode]);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -367,11 +383,24 @@ export default function NewProjectPage() {
       timers.push(setTimeout(() => { setAgentStep(4); setStatusMsg('Cost Agent rolling up MYR + transportation…'); }, 30000));
       timers.push(setTimeout(() => { setAgentStep(5); setStatusMsg('Validation Layer: schema + sanity checks…'); }, 38000));
 
-      const res = await fetch('/api/generate', {
+      // Primary endpoint depends on the agent toggle
+      const primaryEndpoint = useAgentMode ? '/api/generate-agent' : '/api/generate';
+      let res = await fetch(primaryEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+
+      // Auto-fallback: if the agent path fails with 5xx, retry on the classic chain
+      if (!res.ok && useAgentMode && res.status >= 500) {
+        console.warn('[new-project] agent endpoint failed — falling back to classic /api/generate');
+        setStatusMsg('Agent pipeline unavailable — falling back to classic generation…');
+        res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+      }
 
       timers.forEach((t) => clearTimeout(t));
 
@@ -449,6 +478,38 @@ export default function NewProjectPage() {
         </div>
         <ArrowRight className="h-4 w-4 shrink-0 text-blue-400" />
       </Link>
+
+      {/* Agentic mode toggle */}
+      <div className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-white">Agentic AI pipeline</span>
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-violet-300">
+              BETA
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-400">
+            {useAgentMode
+              ? 'ON — the LLM dynamically calls tools (hydraulics calc, supplier lookup, material check, HAZOP audit, AACE cost reconciler) and reasons about each step. Auto-falls-back to classic pipeline if the agent fails.'
+              : 'OFF — uses the classic single-call pipeline with post-validation. Proven and fast. Switch ON to use the new tool-calling agent.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={useAgentMode}
+          onClick={() => setUseAgentMode((v) => !v)}
+          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border border-slate-700 transition-colors ${
+            useAgentMode ? 'bg-violet-600' : 'bg-slate-800'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              useAgentMode ? 'translate-x-5' : 'translate-x-0.5'
+            }`}
+          />
+        </button>
+      </div>
 
       {/* Generating overlay — multi-agent pipeline */}
       {generating && (

@@ -35,10 +35,10 @@ function getMistralClient() {
     maxRetries: 0,
   });
 }
-function getCerebrasClient() {
+function getSambaNovaClient() {
   return new OpenAI({
-    apiKey: process.env.CEREBRAS_API_KEY!,
-    baseURL: 'https://api.cerebras.ai/v1',
+    apiKey: process.env.SAMBANOVA_API_KEY!,
+    baseURL: 'https://api.sambanova.ai/v1',
     maxRetries: 0,
   });
 }
@@ -56,14 +56,18 @@ function buildAgentChain(): AgentProvider[] {
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // Mistral Medium — solid tool-calling support
+  // Mistral Large — best Mistral model for tool calling
   if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-medium-latest', client: getMistralClient(), max_tokens: 8000 });
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // Cerebras Qwen — fast, supports tools via OpenAI compat
-  if (process.env.CEREBRAS_API_KEY) {
-    chain.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', client: getCerebrasClient(), max_tokens: 8000 });
+  // SambaNova Llama 3.3 70B — Llama has good native tool support
+  if (process.env.SAMBANOVA_API_KEY) {
+    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
   }
+  // NOTE: Cerebras intentionally excluded from agent chain — Qwen-3 doesn't
+  // support tool calling on Cerebras (404), and other models on this account
+  // (gpt-oss-120b) return content in "reasoning" field which breaks OpenAI SDK.
+  // Cerebras remains the primary provider for classic /api/generate.
   return chain;
 }
 

@@ -156,11 +156,13 @@ export async function runAgentLoop(
   let iter = 0;
 
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
+    // tool_choice "required" is unsupported on Mistral and some other providers.
+    // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
     const completion = await cfg.client.chat.completions.create({
       model: cfg.model,
       messages,
       tools: AGENT_TOOLS,
-      tool_choice: iter === 0 ? 'required' : 'auto',
+      tool_choice: 'auto',
       max_tokens: cfg.max_tokens ?? 8000,
       temperature: 0.1,
     });

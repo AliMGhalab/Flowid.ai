@@ -1,0 +1,609 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 8637
+>>
+stream
+0.5670000000000001 w
+0 G
+0.12 0.25 0.69 rg
+0. 841.8899999999999864 595.2755905511811534 -45.354330708661422 re
+f
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+1. g
+56.6929133858267775 813.5435433070865656 Td
+(SAWIT MAJU SDN BHD) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+1. g
+56.6929133858267775 802.2049606299212883 Td
+(Palm Oil Plantation & Mill Operations · Pengerang, Johor) Tj
+ET
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 773.8585039370078675 Td
+(REQUEST FOR QUOTATION) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.314 g
+56.6929133858267775 759.6852755905511003 Td
+(Closed-Loop Cooling Water System — Mill Process Equipment) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.314 g
+56.6929133858267775 748.346692913385823 Td
+(Ref: SAWIT-RFQ-2026-014   |   Date: 2 June 2026   |   Closing: 25 June 2026) Tj
+ET
+0.71 G
+56.6929133858267775 728.5041732283464171 m
+538.5826771653544256 728.5041732283464171 l
+S
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 711.4962992125983874 Td
+(1. PROJECT BACKGROUND) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 692.7309448818897408 Td
+(Sawit Maju Sdn Bhd is upgrading the cooling water utility system at our palm oil mill in Pengerang, Johor \(60) Tj
+T* (tonnes FFB/hr capacity\). The current open-loop cooling tower configuration has reached end-of-life and we) Tj
+T* (are transitioning to a closed-loop chilled water system to serve our sterilisation autoclave heat exchangers,) Tj
+T* (kernel oil refinery condensers, and ancillary process cooling loads.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 630.9356692913385132 Td
+(This project must be commissioned before our annual major maintenance shutdown in Q4 2026.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 596.3529921259842013 Td
+(2. SCOPE OF SUPPLY & INSTALLATION) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 577.587637795275441 Td
+(The contractor shall supply, install, test, and commission a complete cooling water circulation system) Tj
+T* (including:) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 545.2726771653542528 Td
+(• Duty + standby centrifugal pumps with VFD control \(one duty, one standby, automatic transfer on fault\)) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 533.3671653543306093 Td
+(• Suction header, discharge header, and expansion vessel — closed loop configuration) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 521.4616535433069657 Td
+(• Full instrumentation: flow transmitter on main line, pressure transmitters on pump suction and discharge,) Tj
+T* (temperature transmitters on supply and return lines, level transmitter on expansion vessel) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 497.6506299212597355 Td
+(• Pressure safety relief valves \(PSV\) — DOSH-registered) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 485.745118110236092 Td
+(• Control valve for temperature regulation, all isolation, check, drain, and vent valves) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 473.8396062992124484 Td
+(• Carbon steel piping \(epoxy-lined for corrosion resistance in Malaysian tropical climate\)) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 461.9340944881888618 Td
+(• MCC panel with VFD drives, local control panel with HMI, all power and instrument cabling) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 450.0285826771652751 Td
+(• Equipment skid, pipe supports, and access platforms) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 438.1230708661416884 Td
+(• Y-strainer \(commissioning\), flushing services, performance testing) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 414.8789763779527107 Td
+(3. TECHNICAL REQUIREMENTS) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 396.1136220472440641 Td
+(Fluid) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 396.1136220472440641 Td
+(Cooling water \(closed loop, treated\)) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 383.3577165354330418 Td
+(Design flow rate) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 383.3577165354330418 Td
+(Approximately 80 m³/hr \(size to actual heat load\)) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 370.6018110236220195 Td
+(Operating pressure) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 370.6018110236220195 Td
+(6 bar\(g\) typical) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 357.8459055118109973 Td
+(Operating temperature) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 357.8459055118109973 Td
+(32°C supply / 42°C return \(typical\)) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 345.089999999999975 Td
+(Duty cycle) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 345.089999999999975 Td
+(24 hours/day, 7 days/week, continuous operation) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 332.3340944881889527 Td
+(Service life) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 332.3340944881889527 Td
+(Minimum 15 years under tropical climate) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+56.6929133858267775 319.5781889763778736 Td
+(Redundancy) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+198.4251968503937178 319.5781889763778736 Td
+(N+1 pump redundancy with automatic switchover) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 295.4837007874015171 Td
+(4. COMPLIANCE & STANDARDS) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 276.7183464566928706 Td
+(All equipment and installation shall conform to:) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 259.1435433070865884 Td
+(• DOSH FMA 1967 — pressure vessel registration and rotating equipment certification) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 247.2380314960629448 Td
+(• BOMBA UBBL — fire safety for electrical enclosures in industrial buildings) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 235.332519685039415 Td
+(• SIRIM QAS — electrical equipment certification \(VFD, control panels\)) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 223.4270078740157714 Td
+(• DOE Malaysia — environmental compliance \(cooling water discharge\)) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.157 g
+65.1968503937007995 211.5214960629922416 Td
+(• MS 1745 — code of practice for installation of metallic piping systems) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.251 0.686 rg
+56.6929133858267775 188.2774015748033207 Td
+(5. COMMERCIAL TERMS) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 169.5120472440945605 Td
+(Project budget ceiling: RM 750,000 \(Malaysian Ringgit, inclusive of SST\). All pricing in MYR. Payment terms:) Tj
+T* (30% on order, 50% on delivery, 20% on commissioning sign-off.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 134.3624409448819961 Td
+(Preferred suppliers: Malaysian-registered companies \(Sdn Bhd\) with offices in Johor, Selangor, or Penang for) Tj
+T* (after-sales support proximity to Pengerang.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.157 g
+56.6929133858267775 99.212834645669318 Td
+(Lead time requirement: equipment delivery within 10 weeks of purchase order, installation and) Tj
+T* (commissioning within a further 6 weeks.) Tj
+ET
+0.71 G
+56.6929133858267775 58.3939370078741362 m
+538.5826771653544256 58.3939370078741362 l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.157 g
+56.6929133858267775 41.3860629921260852 Td
+(SUBMIT TO:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.157 g
+56.6929133858267775 30.0474803149608078 Td
+(Ir. Encik Razif bin Abdullah   |   Project Engineer, Sawit Maju Sdn Bhd) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.157 g
+56.6929133858267775 18.7088976377954168 Td
+(Email: razif.abdullah@sawitmaju.com.my   |   Tel: +60 7-823 4561) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.157 g
+56.6929133858267775 7.3703149606300258 Td
+(Mill Site: PLO 442, Kawasan Perindustrian Pengerang, 81600 Johor) Tj
+ET
+BT
+/F3 7 Tf
+8.0499999999999989 TL
+0.588 g
+56.6929133858267775 34.0159842519684616 Td
+(Document classification: Restricted to qualified bidders.   |   Page 1 of 1) Tj
+ET
+BT
+/F3 7 Tf
+8.0499999999999989 TL
+0.588 g
+387.1026771653544074 34.0159842519684616 Td
+(Sawit Maju Sdn Bhd · Co. Reg: 200401012345-D) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R ]
+/Count 1
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+/F3 7 0 R
+/F4 8 0 R
+/F5 9 0 R
+/F6 10 0 R
+/F7 11 0 R
+/F8 12 0 R
+/F9 13 0 R
+/F10 14 0 R
+/F11 15 0 R
+/F12 16 0 R
+/F13 17 0 R
+/F14 18 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+19 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260602151859+08'00')
+>>
+endobj
+20 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 21
+0000000000 65535 f 
+0000008841 00000 n 
+0000010658 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000008898 00000 n 
+0000009023 00000 n 
+0000009153 00000 n 
+0000009286 00000 n 
+0000009423 00000 n 
+0000009546 00000 n 
+0000009675 00000 n 
+0000009807 00000 n 
+0000009943 00000 n 
+0000010071 00000 n 
+0000010198 00000 n 
+0000010327 00000 n 
+0000010460 00000 n 
+0000010562 00000 n 
+0000010906 00000 n 
+0000010992 00000 n 
+trailer
+<<
+/Size 21
+/Root 20 0 R
+/Info 19 0 R
+/ID [ <96A1BEAAFBA1088F08E1AD996C4C71FE> <96A1BEAAFBA1088F08E1AD996C4C71FE> ]
+>>
+startxref
+11096
+%%EOF

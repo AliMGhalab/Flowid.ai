@@ -416,6 +416,14 @@ function getCerebrasClient() {
   });
 }
 
+function getGroqClient() {
+  return new OpenAI({
+    apiKey: process.env.GROQ_API_KEY!,
+    baseURL: 'https://api.groq.com/openai/v1',
+    maxRetries: 0,
+  });
+}
+
 function getMistralClient() {
   return new OpenAI({
     apiKey: process.env.MISTRAL_API_KEY!,
@@ -1096,7 +1104,7 @@ function validateRecommendation(rec: Record<string, unknown>): Record<string, un
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral' | 'sambanova';
+  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral' | 'sambanova' | 'groq';
   model: string;
   max_tokens: number;
 }
@@ -1104,19 +1112,24 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Cerebras Qwen 235B — primary (fast inference; 8s at 12k tokens earlier = plenty of room)
+  // Groq Llama 3.3 70B — PRIMARY. Custom LPU silicon, ~50ms per call. Different
+  // infrastructure from all other providers — won't share rate-limit buckets.
+  if (process.env.GROQ_API_KEY) {
+    roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
+  }
+  // Cerebras Qwen 235B — second (fast, generous free tier)
   if (process.env.CEREBRAS_API_KEY) {
     roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 20000 });
   }
-  // Mistral Medium — fallback (different vendor, native JSON mode)
+  // Mistral Medium — third (different vendor, native JSON mode)
   if (process.env.MISTRAL_API_KEY) {
     roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
   }
-  // SambaNova Llama 3.3 70B — third fallback (specialized fast hardware, different vendor)
+  // SambaNova Llama 3.3 70B — fourth (specialised fast hardware)
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 10000 });
   }
-  // Chutes DeepSeek V3 — fourth fallback (paid tier, handles large prompts, high quality)
+  // Chutes DeepSeek V3 — fifth (paid tier, high quality)
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 16000 });
   }
@@ -1129,6 +1142,7 @@ function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'cerebras') return getCerebrasClient();
   if (cfg.provider === 'mistral') return getMistralClient();
   if (cfg.provider === 'sambanova') return getSambaNovaClient();
+  if (cfg.provider === 'groq') return getGroqClient();
   return getGeminiClient();
 }
 

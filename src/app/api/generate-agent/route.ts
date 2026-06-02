@@ -42,6 +42,13 @@ function getSambaNovaClient() {
     maxRetries: 0,
   });
 }
+function getGroqClient() {
+  return new OpenAI({
+    apiKey: process.env.GROQ_API_KEY!,
+    baseURL: 'https://api.groq.com/openai/v1',
+    maxRetries: 0,
+  });
+}
 
 interface AgentProvider {
   provider: string;
@@ -52,18 +59,20 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
+  // Groq Llama 3.3 70B — PRIMARY. Custom LPU silicon = ~50ms per call (tested).
+  // Eliminates the 504-timeout problem for the agent loop entirely.
+  if (process.env.GROQ_API_KEY) {
+    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 6000 });
+  }
   if (process.env.MISTRAL_API_KEY) {
-    // Mistral Large — best speed/quality balance for tool calling, dedicated infra
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 6000 });
   }
   if (process.env.SAMBANOVA_API_KEY) {
-    // SambaNova Llama 3.3 — specialised inference hardware, very fast per call
     chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 6000 });
   }
   if (process.env.CHUTES_API_KEY) {
-    // Chutes models — smaller-first for speed
-    chain.push({ provider: 'chutes-qwen',     model: 'Qwen/Qwen3-32B-TEE',              client: getChutesClient(), max_tokens: 6000 });
-    chain.push({ provider: 'chutes-glm',      model: 'zai-org/GLM-5.1-TEE',             client: getChutesClient(), max_tokens: 6000 });
+    chain.push({ provider: 'chutes-qwen',     model: 'Qwen/Qwen3-32B-TEE',             client: getChutesClient(), max_tokens: 6000 });
+    chain.push({ provider: 'chutes-glm',      model: 'zai-org/GLM-5.1-TEE',            client: getChutesClient(), max_tokens: 6000 });
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 6000 });
   }
   return chain;

@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   images: {
     domains: [],
   },
+  // pdf-parse uses an old `pdfjs-dist` build that fails server-bundling unless
+  // we keep it external. canvas is a transitive dep we don't actually use.
+  serverExternalPackages: ['pdf-parse', 'pdfjs-dist'],
   async headers() {
     return [
       {

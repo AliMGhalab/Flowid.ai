@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { createProject } from '@/lib/firestore';
 import type { ProjectInput } from '@/types';
-import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin, Scale } from 'lucide-react';
+import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin, Scale, FileText, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
@@ -287,6 +288,23 @@ export default function NewProjectPage() {
     if (!authLoading && !user) router.replace('/login');
   }, [user, authLoading, router]);
 
+  // Read prefill from /new-project/from-document — hands off via sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('prefill') !== '1') return;
+      const raw = sessionStorage.getItem('flowid:prefill');
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<ProjectInput>;
+      setForm((prev) => ({ ...prev, ...parsed }));
+      sessionStorage.removeItem('flowid:prefill');
+      toast.success('Form pre-filled from your document. Review and adjust as needed.');
+    } catch {
+      // ignore malformed prefill
+    }
+  }, []);
+
   const set = <K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => {
@@ -387,7 +405,7 @@ export default function NewProjectPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600">
           <Droplets className="h-5 w-5 text-white" />
         </div>
@@ -398,6 +416,25 @@ export default function NewProjectPage() {
           </p>
         </div>
       </div>
+
+      {/* Document upload shortcut */}
+      <Link
+        href="/new-project/from-document"
+        className="mb-8 flex items-center gap-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 transition-colors hover:border-blue-500/60 hover:bg-blue-500/10"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/20">
+          <FileText className="h-5 w-5 text-blue-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white">
+            Have a client RFQ, email, or technical spec?
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Upload a PDF or paste the text — Flowid.ai will extract the requirements and auto-fill this form.
+          </p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-blue-400" />
+      </Link>
 
       {/* Generating overlay — multi-agent pipeline */}
       {generating && (

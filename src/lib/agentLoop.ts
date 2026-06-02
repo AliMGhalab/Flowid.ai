@@ -58,17 +58,17 @@ CRITICAL — do NOT finalize too early. A "complete" design has:
   • process_flow.nodes: AT LEAST 8 nodes wired in a chain from source to destination
   • piping spec, cost_estimate, maintenance_schedule, compliance_standards, recommended_vendors
 
-REQUIRED TOOL SEQUENCE (use as guidance, not a rigid script):
+RECOMMENDED TOOL SEQUENCE — keep it to ≤8 tool calls:
   1. derive_process_parameters — establish flow / pressure / temperature first
   2. calculate_hydraulics — get Re, regime, friction, pressure drop
   3. size_pump_motor — get pump kW, motor kW, NPSH margin
   4. get_required_hazop_guidewords — know what hazards you must cover
-  5. lookup_malaysian_suppliers — call ONCE PER CATEGORY (pump, valve, instrument, piping, vessel, electrical, safety, fitting) — that's 6-8 calls minimum
+  5. lookup_malaysian_suppliers — CALL ONCE WITH ALL CATEGORIES YOU NEED in the "categories" array. Do NOT call this tool multiple times. Pass ["pump", "valve", "instrument", "piping", "vessel", "electrical", "safety", "fitting"] in a single call.
   6. check_material_compatibility — for the dominant wetted material vs the fluid
   7. reconcile_costs_aace — feed the FULL component list, get the cost breakdown back
-  8. ONLY THEN finalize_design with the complete recommendation
+  8. finalize_design with the complete recommendation
 
-You have up to 25 tool calls. Use them — a real engineer wouldn't size a 20-component system from a single thought.
+You have a HARD LIMIT of 10 tool calls. Batch your work. Do not waste round-trips.
 
 OUTPUT FIELD NAMES in finalize_design.recommendation:
   summary, system_type, design_basis, overall_confidence, process_parameters, engineering_calculations,
@@ -83,7 +83,9 @@ Language: English. Money: MYR. Standards: DOSH FMA 1967, BOMBA UBBL, SIRIM, PETR
 
 You are an AGENT. Do the work. Do not shortcut the BOM.`;
 
-const MAX_ITERATIONS = 25;
+// Vercel function ceiling is 120s. At ~10s per tool round-trip, 25 iterations
+// blows past the budget. Capped at 10 so the agent finishes within the window.
+const MAX_ITERATIONS = 10;
 const MAX_TOOL_RESULT_SIZE = 12000; // chars — truncate huge tool outputs
 
 function truncate(s: string, max = MAX_TOOL_RESULT_SIZE): string {

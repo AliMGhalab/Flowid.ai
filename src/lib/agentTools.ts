@@ -79,17 +79,21 @@ export const AGENT_TOOLS = [
     function: {
       name: 'lookup_malaysian_suppliers',
       description:
-        'Looks up real Malaysian suppliers for a component category, ranked by proximity to the project state. Returns supplier name, city, and typical MYR price range.',
+        'Looks up real Malaysian suppliers for one OR MORE component categories in a single call, ranked by proximity to the project state. Pass ALL categories you need (pump, valve, instrument, piping, vessel, electrical, safety, fitting) at once to save round-trips.',
       parameters: {
         type: 'object',
         properties: {
-          category: {
-            type: 'string',
-            enum: ['pump', 'valve', 'instrument', 'piping', 'vessel', 'electrical', 'safety', 'fitting', 'heat_exchanger', 'filter'],
+          categories: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['pump', 'valve', 'instrument', 'piping', 'vessel', 'electrical', 'safety', 'fitting', 'heat_exchanger', 'filter'],
+            },
+            description: 'List of categories — pass all you need in one call to minimise round-trips',
           },
           project_state: { type: 'string', description: 'Malaysian state name (lowercase, underscored)' },
         },
-        required: ['category', 'project_state'],
+        required: ['categories', 'project_state'],
       },
     },
   },
@@ -366,26 +370,43 @@ const SUPPLIERS_BY_CATEGORY: Record<string, Array<{ name: string; city: string; 
 };
 
 export function tool_lookup_malaysian_suppliers(args: {
-  category: string;
+  categories?: string[];
+  category?: string;  // legacy single-category support
   project_state: string;
 }): ToolResult {
-  const cat = args.category.toLowerCase();
-  const suppliers = SUPPLIERS_BY_CATEGORY[cat];
-  if (!suppliers) {
-    return { ok: false, error: `Unknown category "${args.category}". Use one of: ${Object.keys(SUPPLIERS_BY_CATEGORY).join(', ')}` };
+  // Accept either `categories: [...]` (new) or `category: "..."` (legacy)
+  const cats: string[] = (args.categories && Array.isArray(args.categories) && args.categories.length > 0)
+    ? args.categories.map((c) => c.toLowerCase())
+    : args.category
+      ? [args.category.toLowerCase()]
+      : [];
+  if (cats.length === 0) {
+    return { ok: false, error: 'No categories provided. Use `categories` with at least one of: ' + Object.keys(SUPPLIERS_BY_CATEGORY).join(', ') };
   }
-  // Rank by proximity — same state first, then Klang Valley, then others
-  const sameState = suppliers.filter((s) => s.state === args.project_state.toLowerCase());
-  const klangValley = suppliers.filter((s) => ['selangor', 'kuala_lumpur'].includes(s.state) && s.state !== args.project_state.toLowerCase());
-  const others = suppliers.filter((s) => !['selangor', 'kuala_lumpur'].includes(s.state) && s.state !== args.project_state.toLowerCase());
-  const ranked = [...sameState, ...klangValley, ...others];
-  const isEastMalaysia = ['sabah', 'sarawak', 'labuan'].includes(args.project_state.toLowerCase());
+  const projectState = args.project_state.toLowerCase();
+  const isEastMalaysia = ['sabah', 'sarawak', 'labuan'].includes(projectState);
+
+  const results: Record<string, unknown> = {};
+  const unknown: string[] = [];
+
+  for (const cat of cats) {
+    const suppliers = SUPPLIERS_BY_CATEGORY[cat];
+    if (!suppliers) {
+      unknown.push(cat);
+      continue;
+    }
+    const sameState = suppliers.filter((s) => s.state === projectState);
+    const klangValley = suppliers.filter((s) => ['selangor', 'kuala_lumpur'].includes(s.state) && s.state !== projectState);
+    const others = suppliers.filter((s) => !['selangor', 'kuala_lumpur'].includes(s.state) && s.state !== projectState);
+    results[cat] = [...sameState, ...klangValley, ...others].slice(0, 5);
+  }
+
   return {
     ok: true,
     data: {
-      category: cat,
       project_state: args.project_state,
-      suppliers: ranked.slice(0, 6),
+      suppliers_by_category: results,
+      unknown_categories: unknown,
       logistics_premium: isEastMalaysia ? '10-15% air/sea freight to East Malaysia' : '5-10% courier to non-Klang Valley',
     },
   };

@@ -206,8 +206,17 @@ export async function runAgentLoop(
       // Special: finalize_design — but ONLY accept if the recommendation is complete.
       // If the agent tries to finalize prematurely, reject and tell it what's missing.
       if (fnName === 'finalize_design') {
-        const rec = (args as { recommendation?: Record<string, unknown> })?.recommendation;
+        // Accept both shapes: { recommendation: {...} }  OR  the recommendation fields at the top level
+        const argsObj = args as Record<string, unknown>;
+        const nested = argsObj?.recommendation;
+        const rec =
+          nested && typeof nested === 'object'
+            ? (nested as Record<string, unknown>)
+            : argsObj && typeof argsObj === 'object' && 'components' in argsObj
+              ? argsObj
+              : undefined;
         const issues = validateAgentRecommendation(rec);
+        console.log(`[agentLoop] finalize_design called — components=${Array.isArray((rec as { components?: unknown[] })?.components) ? ((rec as { components?: unknown[] }).components!).length : 0}, issues=${issues.length}`);
         if (issues.length === 0 && rec) {
           finalRecommendation = rec as Record<string, unknown>;
           finalized = true;

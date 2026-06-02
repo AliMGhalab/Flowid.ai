@@ -393,8 +393,14 @@ export default function NewProjectPage() {
 
       // Auto-fallback: if the agent path fails with 5xx, retry on the classic chain
       if (!res.ok && useAgentMode && res.status >= 500) {
-        console.warn('[new-project] agent endpoint failed — falling back to classic /api/generate');
+        const fallbackBody = await res.json().catch(() => null);
+        const fallbackReason = fallbackBody?.diagnostic ?? fallbackBody?.error ?? `HTTP ${res.status}`;
+        console.warn('[new-project] agent endpoint failed — falling back to classic /api/generate. Reason:', fallbackReason);
         setStatusMsg('Agent pipeline unavailable — falling back to classic generation…');
+        toast.error(
+          `Agent pipeline failed: ${String(fallbackReason).slice(0, 120)}. Falling back to classic mode — output may have fewer features.`,
+          { duration: 8000 },
+        );
         res = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -418,7 +424,14 @@ export default function NewProjectPage() {
         throw new Error(errorMsg);
       }
 
-      const { recommendation } = await res.json();
+      const respBody = await res.json();
+      const recommendation = respBody.recommendation;
+      // Log which endpoint won and how many components came back — visible in browser console
+      const compCount = Array.isArray(recommendation?.components) ? recommendation.components.length : 0;
+      console.log(`[new-project] response from ${res.url.endsWith('/api/generate-agent') ? 'AGENT' : 'CLASSIC'} — ${compCount} components`);
+      if (recommendation?.agent_meta) {
+        console.log('[new-project] agent_meta:', recommendation.agent_meta);
+      }
 
       setAgentStep(6);
       setStatusMsg('Saving your project…');

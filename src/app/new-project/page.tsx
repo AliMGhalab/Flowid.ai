@@ -364,16 +364,22 @@ export default function NewProjectPage() {
     try {
       // ── Cache lookup: if the user has generated an identical project in the last 24h,
       //    return the saved result instead of regenerating. Guarantees reproducibility.
+      //
+      //    EXCEPTION: when agent mode is ON, we always do a fresh agent run so that
+      //    the engineer (and judges, during demo) can SEE the tool-calling pipeline
+      //    execute in real time. Cache only applies to classic mode.
       const inputHash = await computeInputHash(form);
-      const cached = await findCachedProject(user.uid, inputHash);
-      if (cached) {
-        setAgentStep(6);
-        setStatusMsg('Found identical project — returning cached result…');
-        toast.success('Identical project found — returning cached result');
-        // Small UX pause so the user can see "cache hit" feedback before redirect
-        await new Promise((r) => setTimeout(r, 600));
-        router.push(`/project/${cached.id}?from=cache`);
-        return;
+      if (!useAgentMode) {
+        const cached = await findCachedProject(user.uid, inputHash);
+        if (cached) {
+          setAgentStep(6);
+          setStatusMsg('Found identical project — returning cached result…');
+          toast.success('Identical project found — returning cached result');
+          // Small UX pause so the user can see "cache hit" feedback before redirect
+          await new Promise((r) => setTimeout(r, 600));
+          router.push(`/project/${cached.id}?from=cache`);
+          return;
+        }
       }
 
       // Sequenced agent progress reveal — gives the user a multi-agent pipeline view

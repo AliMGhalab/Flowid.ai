@@ -157,16 +157,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'File too large (max 10 MB).' }, { status: 400 });
       }
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      // Dynamic import — pdf-parse pulls in big deps; only load when needed
-      // Handle both default-export (older) and named-export (newer) variants
-      const pdfMod = await import('pdf-parse');
-      type ParseFn = (buf: Buffer) => Promise<{ text?: string }>;
-      const pdfParse: ParseFn =
-        ((pdfMod as unknown as { default?: ParseFn }).default) ??
-        (pdfMod as unknown as ParseFn);
-      const parsed = await pdfParse(buffer);
-      pdfText = parsed.text ?? '';
+      // Dynamic import — unpdf is serverless-friendly (no DOM dependencies)
+      const { extractText, getDocumentProxy } = await import('unpdf');
+      const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
+      const { text } = await extractText(pdf, { mergePages: true });
+      pdfText = Array.isArray(text) ? text.join('\n') : (text ?? '');
       if (!pdfText.trim()) {
         return NextResponse.json(
           { error: 'No text found in PDF — it may be image-only / scanned. Try pasting the text directly.' },

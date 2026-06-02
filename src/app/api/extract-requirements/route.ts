@@ -192,11 +192,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ extracted: result, provider: cfg.provider });
       } catch (err) {
         lastErr = err;
-        console.warn(`[extract-requirements] ${cfg.model} failed — trying next provider`);
+        // Log the full error so we can see what each provider returned
+        const msg = err instanceof Error ? err.message : String(err);
+        const status = (err as { status?: number })?.status ?? '—';
+        console.warn(`[extract-requirements] ${cfg.provider}/${cfg.model} failed (status=${status}): ${msg.slice(0, 200)}`);
+        // ALWAYS continue to next provider — including 402, 429, 500, parse errors
         continue;
       }
     }
-    throw lastErr ?? new Error('All extraction providers failed');
+    // All providers exhausted — return a friendly message instead of leaking the AI's
+    // "payment required" / "credit exhausted" raw error
+    const lastMsg = lastErr instanceof Error ? lastErr.message : 'Unknown error';
+    console.error('[extract-requirements] ALL providers failed. Last error:', lastMsg);
+    return NextResponse.json(
+      {
+        error: 'All AI providers are currently unavailable. Please try again in a few minutes, or fill the form manually.',
+        diagnostic: lastMsg.slice(0, 300),
+      },
+      { status: 503 },
+    );
   } catch (err) {
     console.error('[extract-requirements]', err);
     const msg = err instanceof Error ? err.message : 'Extraction failed';

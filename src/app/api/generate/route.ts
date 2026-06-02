@@ -1239,13 +1239,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ recommendation, validation_warnings: warnings });
       } catch (err) {
         lastError = err;
-        if (isRateLimitError(err)) {
-          console.warn(`[/api/generate] rate-limited on ${cfg.model}, trying next model`);
-          continue; // try next model
+        const msg = err instanceof Error ? err.message : String(err);
+        const status = (err as { status?: number })?.status ?? '—';
+        // Payment-required / credit-exhausted errors should ALWAYS skip to next provider
+        const isBillingError =
+          status === 402 ||
+          msg.toLowerCase().includes('payment') ||
+          msg.toLowerCase().includes('credit') ||
+          msg.toLowerCase().includes('billing') ||
+          msg.toLowerCase().includes('insufficient');
+        if (isRateLimitError(err) || isBillingError) {
+          console.warn(`[/api/generate] ${cfg.model} unavailable (status=${status}, billing=${isBillingError}): ${msg.slice(0, 150)} — trying next provider`);
+          continue;
         }
-        // JSON / validation error — skip to next provider immediately
-        // (retrying the same model takes too long and risks Vercel function timeout)
-        console.warn(`[/api/generate] parse/validation error on ${cfg.model}, trying next provider`);
+        console.warn(`[/api/generate] parse/validation error on ${cfg.model} (status=${status}): ${msg.slice(0, 150)} — trying next provider`);
         continue;
       }
     }

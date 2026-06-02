@@ -930,6 +930,17 @@ export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  // Detect ?from=cache flag set when we returned a cached project on the new-project flow.
+  // Used to show a small "Reproduced from cache" badge.
+  const [fromCache, setFromCache] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('from') === 'cache') setFromCache(true);
+    } catch {}
+  }, []);
 
   const [project, setProject] = useState<Project | null>(null);
   const [fetching, setFetching] = useState(true);
@@ -1022,7 +1033,18 @@ export default function ProjectPage() {
               <Droplets className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white sm:text-2xl">{project.projectName}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold text-white sm:text-2xl">{project.projectName}</h1>
+                {fromCache && (
+                  <span
+                    title={`Identical inputs were generated earlier on ${project.createdAt.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} — returning the cached result for reproducibility.`}
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    Reproduced from cache
+                  </span>
+                )}
+              </div>
               <p className="mt-0.5 text-sm text-slate-400">
                 {project.input.industry} · {getFluidLabel(project.input.fluidType, project.input.customFluidType)}
                 {project.input.malaysiaState && ` · ${project.input.malaysiaState.replace(/_/g, ' ')}, Malaysia`}

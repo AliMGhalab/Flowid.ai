@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
-import { createProject } from '@/lib/firestore';
+import { createProject, computeInputHash, findCachedProject } from '@/lib/firestore';
 import type { ProjectInput } from '@/types';
 import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin, Scale, FileText, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -346,6 +346,20 @@ export default function NewProjectPage() {
 
     const timers: ReturnType<typeof setTimeout>[] = [];
     try {
+      // ── Cache lookup: if the user has generated an identical project in the last 24h,
+      //    return the saved result instead of regenerating. Guarantees reproducibility.
+      const inputHash = await computeInputHash(form);
+      const cached = await findCachedProject(user.uid, inputHash);
+      if (cached) {
+        setAgentStep(6);
+        setStatusMsg('Found identical project — returning cached result…');
+        toast.success('Identical project found — returning cached result');
+        // Small UX pause so the user can see "cache hit" feedback before redirect
+        await new Promise((r) => setTimeout(r, 600));
+        router.push(`/project/${cached.id}?from=cache`);
+        return;
+      }
+
       // Sequenced agent progress reveal — gives the user a multi-agent pipeline view
       timers.push(setTimeout(() => { setAgentStep(1); setStatusMsg('BOM Agent selecting Malaysian suppliers…'); }, 6000));
       timers.push(setTimeout(() => { setAgentStep(2); setStatusMsg('Hydraulics Agent computing NPSH, head, Reynolds…'); }, 14000));
@@ -379,7 +393,7 @@ export default function NewProjectPage() {
 
       setAgentStep(6);
       setStatusMsg('Saving your project…');
-      const projectId = await createProject(user.uid, form, recommendation);
+      const projectId = await createProject(user.uid, form, recommendation, inputHash);
 
       toast.success('System design complete!');
       router.push(`/project/${projectId}`);

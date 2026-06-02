@@ -34,16 +34,21 @@ const INJECTION_PATTERNS: RegExp[] = [
   /<\|endoftext\|>/i,
 ];
 
+// Use \b on BOTH sides of every keyword so that "bomb" doesn't false-match
+// inside "BOMBA" (the Malaysian Fire & Rescue Department, which is a totally
+// legitimate compliance citation for our use case).
 const OUT_OF_SCOPE_KEYWORDS: Array<{ pattern: RegExp; reason: string }> = [
-  { pattern: /\b(write|generate|compose|create)\s+(me\s+)?(a\s+)?(poem|song|story|joke|essay|article|novel|haiku)/i,
+  { pattern: /\b(write|generate|compose|create)\s+(me\s+)?(a\s+)?(poem|song|story|joke|essay|article|novel|haiku)\b/i,
     reason: 'This is a fluid system engineering tool, not a writing assistant.' },
-  { pattern: /\b(weapon|bomb|explosive|firearm|grenade|missile|warhead)/i,
+  { pattern: /\b(weapons?|firearms?|grenades?|missiles?|warheads?)\b/i,
     reason: 'Weapons design is outside the scope of this tool.' },
-  { pattern: /\b(nuclear\s+reactor|fissile\s+material|enrichment\s+(of\s+)?uranium)/i,
+  { pattern: /\b(make\s+a\s+bomb|build\s+a\s+bomb|bomb[- ]making|explosive\s+device|ied|improvised\s+explosive)\b/i,
+    reason: 'Explosive device design is outside the scope of this tool.' },
+  { pattern: /\b(nuclear\s+reactor|fissile\s+material|enrichment\s+of\s+uranium)\b/i,
     reason: 'Nuclear systems require specialised licensing beyond DOSH; this tool cannot assist.' },
-  { pattern: /\b(drug\s+(synthesis|manufacture|cooking)|narcotics?|methamphetamine|cocaine)/i,
+  { pattern: /\b(drug\s+(synthesis|manufacture|cooking)|narcotics?|methamphetamine|cocaine|fentanyl)\b/i,
     reason: 'Illegal substance manufacturing is out of scope.' },
-  { pattern: /\b(hack|exploit|penetration\s+test|sql\s+injection|xss|csrf)/i,
+  { pattern: /\b(sql\s+injection|cross[- ]site\s+scripting|xss|csrf|penetration\s+test|exploit\s+(a|the)\s+vulnerab)/i,
     reason: 'Security exploitation is out of scope for an engineering tool.' },
 ];
 

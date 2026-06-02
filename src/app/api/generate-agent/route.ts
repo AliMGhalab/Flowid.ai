@@ -52,23 +52,20 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // GLM-5.1 via Chutes — best fit for tool calling, less hammered than DeepSeek
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-glm',    model: 'zai-org/GLM-5.1-TEE',              client: getChutesClient(), max_tokens: 8000 });
-    chain.push({ provider: 'chutes-qwen',   model: 'Qwen/Qwen3-32B-TEE',               client: getChutesClient(), max_tokens: 8000 });
-    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 8000 });
-  }
-  // Mistral Large — Mistral-native fallback (different infra entirely)
   if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
+    // Mistral Large — best speed/quality balance for tool calling, dedicated infra
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 6000 });
   }
-  // SambaNova Llama 3.3 70B — final fallback (specialised hardware, different vendor)
   if (process.env.SAMBANOVA_API_KEY) {
-    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
+    // SambaNova Llama 3.3 — specialised inference hardware, very fast per call
+    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 6000 });
   }
-  // Cerebras intentionally excluded — Qwen-3 on Cerebras doesn't support tool
-  // calling (404), gpt-oss-120b returns content in "reasoning" field. Cerebras
-  // remains the primary provider for classic /api/generate only.
+  if (process.env.CHUTES_API_KEY) {
+    // Chutes models — smaller-first for speed
+    chain.push({ provider: 'chutes-qwen',     model: 'Qwen/Qwen3-32B-TEE',              client: getChutesClient(), max_tokens: 6000 });
+    chain.push({ provider: 'chutes-glm',      model: 'zai-org/GLM-5.1-TEE',             client: getChutesClient(), max_tokens: 6000 });
+    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 6000 });
+  }
   return chain;
 }
 

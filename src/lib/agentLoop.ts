@@ -157,17 +157,42 @@ export async function runAgentLoop(
   let finalized = false;
   let iter = 0;
 
+  // Vercel function ceiling is 120s. Hard stop the loop at 95s so we have time
+  // to return JSON. Per-iteration AbortController kills hung LLM calls at 25s.
+  const loopStart = Date.now();
+  const LOOP_DEADLINE_MS = 95_000;
+
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
+    if (Date.now() - loopStart > LOOP_DEADLINE_MS) {
+      console.warn(`[agentLoop] time budget reached at iter=${iter} — aborting loop`);
+      break;
+    }
     // tool_choice "required" is unsupported on Mistral and some other providers.
     // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
-    const completion = await cfg.client.chat.completions.create({
-      model: cfg.model,
-      messages,
-      tools: AGENT_TOOLS,
-      tool_choice: 'auto',
-      max_tokens: cfg.max_tokens ?? 8000,
-      temperature: 0.1,
-    });
+    const iterController = new AbortController();
+    const iterTimer = setTimeout(() => iterController.abort(), 25_000);
+    let completion;
+    try {
+      completion = await cfg.client.chat.completions.create(
+        {
+          model: cfg.model,
+          messages,
+          tools: AGENT_TOOLS,
+          tool_choice: 'auto',
+          max_tokens: cfg.max_tokens ?? 6000,
+          temperature: 0.1,
+        },
+        { signal: iterController.signal },
+      );
+    } catch (e) {
+      clearTimeout(iterTimer);
+      if (iterController.signal.aborted) {
+        console.warn(`[agentLoop] iter ${iter} aborted at 25s on ${cfg.model}`);
+        throw new Error(`Agent provider ${cfg.model} stalled past 25s`);
+      }
+      throw e;
+    }
+    clearTimeout(iterTimer);
 
     const msg = completion.choices[0]?.message;
     if (!msg) break;

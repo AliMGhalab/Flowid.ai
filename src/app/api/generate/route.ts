@@ -1011,10 +1011,14 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // #1 Groq Llama 3.3 70B — LPU silicon, ~50ms/call. Hits 12k TPM with large prompts
-  // so kept first (usually succeeds on first attempt of the session).
+  // #1 Groq Llama 3.3 70B — LPU silicon, ~50ms/call. 12k TPM bucket.
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 5000 });
+  }
+  // #1b Groq Llama 3.1 8B — SEPARATE TPM bucket (20k TPM vs 12k for 70b).
+  // Smaller model but fast and reliable when 70b is rate-limited.
+  if (process.env.GROQ_API_KEY) {
+    roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 5000 });
   }
   // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier.
   // Model name is 'llama3.3-70b' (no hyphen after llama, confirmed Cerebras API name).
@@ -1190,6 +1194,26 @@ export async function POST(request: NextRequest) {
         const status = (err as { status?: number })?.status ?? '—';
         console.warn(`[/api/generate] ${cfg.provider}/${cfg.model} failed (status=${status}): ${msg.slice(0, 150)} — trying next`);
         continue;
+      }
+    }
+
+    // ── Phase 3: one retry after 3s if everything rate-limited ───────────
+    // Per-minute TPM windows reset after 60s. After 3s the window may have
+    // partially cleared — enough for a single Groq or Cerebras call to succeed.
+    const allRateLimit = lastError && isRateLimitError(lastError);
+    if (allRateLimit) {
+      console.warn('[/api/generate] all providers rate-limited — waiting 3s then retrying race');
+      await new Promise((r) => setTimeout(r, 3000));
+      const retryResult = await Promise.any(
+        raceSlice.map((cfg) => {
+          const p = generateWithModel(input, cfg, 12000).then((rec) => ({ rec, cfg }));
+          p.catch(() => {});
+          return p;
+        }),
+      ).catch(() => null);
+      if (retryResult) {
+        console.log(`[/api/generate] retry winner: ${retryResult.cfg.provider}/${retryResult.cfg.model}`);
+        return finalize(retryResult.rec, input);
       }
     }
 

@@ -57,33 +57,22 @@ function buildAgentChain(): AgentProvider[] {
   // calling (confirmed via /v1/models endpoint). Classic path uses Groq/Cerebras
   // so there is zero overlap on rate-limit buckets.
 
-  // #1 Qwen3.5-397B — primary Chutes TEE model
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen397', model: 'Qwen/Qwen3.5-397B-A17B-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #2 Mistral Large — non-TEE, no cold start, reliable tool calling. First non-Chutes fallback.
-  if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
-  }
-  // #3 Gemini 2.5 Flash — Google infra, independent of Chutes load
-  if (process.env.GEMINI_API_KEY) {
-    chain.push({ provider: 'gemini', model: 'gemini-2.5-flash', client: getGeminiClient(), max_tokens: 8000 });
-  }
-  // #4 DeepSeek V3.2 TEE — backup Chutes
+  // Health-check confirmed working models only:
+  // #1 Chutes DeepSeek V3.2 TEE — confirmed working (5s response)
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #5 Qwen3-32B TEE — smaller Chutes fallback
+  // #2 Chutes Qwen3-32B TEE — confirmed working (1.7s response)
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #6 Qwen3.6 27B TEE — even smaller Chutes fallback
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen27', model: 'Qwen/Qwen3.6-27B-TEE', client: getChutesClient(), max_tokens: 8000 });
+  // #3 Mistral Large — confirmed working family (medium=11s, large similar)
+  if (process.env.MISTRAL_API_KEY) {
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // #7 MiniMax M2.5 TEE — last Chutes fallback
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-minimax', model: 'MiniMaxAI/MiniMax-M2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
+  // #4 Mistral Medium — confirmed working
+  if (process.env.MISTRAL_API_KEY) {
+    chain.push({ provider: 'mistral-med', model: 'mistral-medium-latest', client: getMistralClient(), max_tokens: 8000 });
   }
   return chain;
 }

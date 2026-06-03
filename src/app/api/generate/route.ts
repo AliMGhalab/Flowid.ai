@@ -990,34 +990,30 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 3000 });
   }
-  // SEQUENTIAL FALLBACK (slot 2+)
-  // #4 Gemini 2.5 Flash — Google infra, independent rate-limit bucket
-  if (process.env.GEMINI_API_KEY) {
-    roster.push({ provider: 'gemini', model: 'gemini-2.5-flash', max_tokens: 8000 });
-  }
-  // #5 Mistral Medium — native JSON mode, different vendor
+  // SEQUENTIAL FALLBACK (slot 2+) — health-check confirmed working only
+  // #3 Mistral Medium — confirmed working (11s)
   if (process.env.MISTRAL_API_KEY) {
     roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 8000 });
   }
-  // #6 SambaNova Llama 3.3 70B — max output 4096 tokens
+  // #4 SambaNova Llama 3.3 70B — confirmed working (539ms)
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 4096 });
   }
-  // #7 SambaNova DeepSeek V3.2
-  if (process.env.SAMBANOVA_API_KEY) {
-    roster.push({ provider: 'sambanova', model: 'DeepSeek-V3.2', max_tokens: 4096 });
-  }
-  // #8 SambaNova Llama 4 Maverick
+  // #5 SambaNova Llama 4 Maverick — confirmed working (912ms)
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Llama-4-Maverick-17B-128E-Instruct', max_tokens: 4096 });
   }
-  // #9 Chutes DeepSeek V3.2 TEE
+  // #6 SambaNova DeepSeek V3.2 — confirmed working (13s)
+  if (process.env.SAMBANOVA_API_KEY) {
+    roster.push({ provider: 'sambanova', model: 'DeepSeek-V3.2', max_tokens: 4096 });
+  }
+  // #7 Chutes DeepSeek V3.2 TEE — confirmed working (5s)
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 8000 });
   }
-  // #10 Chutes Qwen3.6 27B TEE — smaller, faster Chutes fallback
+  // #8 Chutes Qwen3-32B TEE — confirmed working (1.7s)
   if (process.env.CHUTES_API_KEY) {
-    roster.push({ provider: 'chutes', model: 'Qwen/Qwen3.6-27B-TEE', max_tokens: 8000 });
+    roster.push({ provider: 'chutes', model: 'Qwen/Qwen3-32B-TEE', max_tokens: 8000 });
   }
 
   return roster;

@@ -35,13 +35,6 @@ function getMistralClient() {
     maxRetries: 0,
   });
 }
-function getGeminiClient() {
-  return new OpenAI({
-    apiKey: process.env.GEMINI_API_KEY!,
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    maxRetries: 0,
-  });
-}
 
 interface AgentProvider {
   provider: string;

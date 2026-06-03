@@ -166,7 +166,7 @@ export async function runAgentLoop(
   // Vercel function ceiling is 120s. Hard stop the loop at 95s so we have time
   // to return JSON. Per-iteration AbortController kills hung LLM calls at 25s.
   const loopStart = Date.now();
-  const LOOP_DEADLINE_MS = 75_000; // 75s loop budget — leaves 45s for next provider if this one stalls
+  const LOOP_DEADLINE_MS = 85_000; // 85s loop budget — 28s cold start + ~7 warm iters at 5-8s each
 
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
     if (Date.now() - loopStart > LOOP_DEADLINE_MS) {
@@ -176,7 +176,7 @@ export async function runAgentLoop(
     // tool_choice "required" is unsupported on Mistral and some other providers.
     // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
     const iterController = new AbortController();
-    const iterTimer = setTimeout(() => iterController.abort(), 20_000); // 20s per iteration — large TEE models need ~15s cold start
+    const iterTimer = setTimeout(() => iterController.abort(), 28_000); // 28s per iteration — large TEE models need up to 25s cold start
     let completion;
     try {
       completion = await cfg.client.chat.completions.create(

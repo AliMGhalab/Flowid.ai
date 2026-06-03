@@ -130,6 +130,7 @@ export async function runAgentLoop(
   userRequest: string,
   cfg: ProviderConfig,
   onTrace?: (trace: AgentTrace) => void,
+  providerBudgetMs = 35_000, // each provider gets this much time before we give up on it
 ): Promise<AgentRunResult> {
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: AGENT_SYSTEM_PROMPT },
@@ -141,10 +142,8 @@ export async function runAgentLoop(
   let finalized = false;
   let iter = 0;
 
-  // Vercel function ceiling is 120s. Hard stop the loop at 95s so we have time
-  // to return JSON. Per-iteration AbortController kills hung LLM calls at 25s.
   const loopStart = Date.now();
-  const LOOP_DEADLINE_MS = 85_000; // 85s loop budget — 28s cold start + ~7 warm iters at 5-8s each
+  const LOOP_DEADLINE_MS = providerBudgetMs;
 
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
     if (Date.now() - loopStart > LOOP_DEADLINE_MS) {

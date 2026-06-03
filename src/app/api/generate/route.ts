@@ -990,12 +990,7 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 3000 });
   }
-  // #3 Groq GPT-OSS 20B — 1000 tok/s, separate bucket
-  if (process.env.GROQ_API_KEY) {
-    roster.push({ provider: 'groq', model: 'openai/gpt-oss-20b', max_tokens: 6000 });
-  }
-
-  // SEQUENTIAL FALLBACK (slot 3+)
+  // SEQUENTIAL FALLBACK (slot 2+)
   // #4 Gemini 2.5 Flash — Google infra, independent rate-limit bucket
   if (process.env.GEMINI_API_KEY) {
     roster.push({ provider: 'gemini', model: 'gemini-2.5-flash', max_tokens: 8000 });
@@ -1141,8 +1136,8 @@ export async function POST(request: NextRequest) {
     // ── Phase 1: race the top 2 providers in parallel ──────────────────────
     // Fast providers (Groq ~200ms, Cerebras ~1s) answer almost instantly.
     // If Groq 413s, Cerebras is already running — no extra wait.
-    const raceSlice = models.slice(0, 3);
-    const fallbackSlice = models.slice(3);
+    const raceSlice = models.slice(0, 2);
+    const fallbackSlice = models.slice(2);
 
     const raceResult = await Promise.any(
       raceSlice.map((cfg) => {

@@ -57,33 +57,33 @@ function buildAgentChain(): AgentProvider[] {
   // calling (confirmed via /v1/models endpoint). Classic path uses Groq/Cerebras
   // so there is zero overlap on rate-limit buckets.
 
-  // #1 Qwen3.5-397B — confirmed working: 7 iterations in ~60s. Primary.
+  // #1 Qwen3.5-397B — primary Chutes TEE model
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-qwen397', model: 'Qwen/Qwen3.5-397B-A17B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #2 DeepSeek V3.2 — strong tool calling, backup
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #3 Qwen3-32B — smaller, faster fallback
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #4 Qwen3.6 27B — even smaller Chutes fallback
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen27', model: 'Qwen/Qwen3.6-27B-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #5 MiniMax M2.5 — Chutes fallback
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-minimax', model: 'MiniMaxAI/MiniMax-M2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #6 Mistral Large — different infra fallback
+  // #2 Mistral Large — non-TEE, no cold start, reliable tool calling. First non-Chutes fallback.
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // #7 Gemini 2.5 Flash — Google infra, last resort
+  // #3 Gemini 2.5 Flash — Google infra, independent of Chutes load
   if (process.env.GEMINI_API_KEY) {
     chain.push({ provider: 'gemini', model: 'gemini-2.5-flash', client: getGeminiClient(), max_tokens: 8000 });
+  }
+  // #4 DeepSeek V3.2 TEE — backup Chutes
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #5 Qwen3-32B TEE — smaller Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #6 Qwen3.6 27B TEE — even smaller Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen27', model: 'Qwen/Qwen3.6-27B-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #7 MiniMax M2.5 TEE — last Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-minimax', model: 'MiniMaxAI/MiniMax-M2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
   return chain;
 }
@@ -139,8 +139,11 @@ export async function POST(request: NextRequest) {
     let lastError: unknown;
     for (const cfg of chain) {
       try {
-        console.log(`[/api/generate-agent] starting agent on ${cfg.provider}/${cfg.model}`);
-        const result = await runAgentLoop(userRequest, cfg);
+        // Chutes TEE models get 35s — they cold-start slowly but once warm are fast.
+        // Mistral/Gemini get 50s — they're stable but need time for full JSON output.
+        const providerBudget = cfg.provider.startsWith('chutes') ? 35_000 : 50_000;
+        console.log(`[/api/generate-agent] starting agent on ${cfg.provider}/${cfg.model} (budget=${providerBudget}ms)`);
+        const result = await runAgentLoop(userRequest, cfg, undefined, providerBudget);
 
         if (!result.finalized || !result.recommendation) {
           console.warn(`[/api/generate-agent] agent on ${cfg.model} did not finalize (used ${result.iterations_used} iterations) — trying next provider`);

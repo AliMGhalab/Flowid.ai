@@ -35,20 +35,6 @@ function getMistralClient() {
     maxRetries: 0,
   });
 }
-function getSambaNovaClient() {
-  return new OpenAI({
-    apiKey: process.env.SAMBANOVA_API_KEY!,
-    baseURL: 'https://api.sambanova.ai/v1',
-    maxRetries: 0,
-  });
-}
-function getGroqClient() {
-  return new OpenAI({
-    apiKey: process.env.GROQ_API_KEY!,
-    baseURL: 'https://api.groq.com/openai/v1',
-    maxRetries: 0,
-  });
-}
 function getGeminiClient() {
   return new OpenAI({
     apiKey: process.env.GEMINI_API_KEY!,

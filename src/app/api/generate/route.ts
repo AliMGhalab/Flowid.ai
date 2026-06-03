@@ -794,9 +794,10 @@ function extractJSON(raw: string): string {
 }
 
 function repairTruncatedJSON(s: string): string {
-  // Count open braces/brackets to determine how many closers are needed
-  let braces = 0;
-  let brackets = 0;
+  // Track the exact ORDER of opening delimiters so we can close in reverse.
+  // The old approach (count braces separately from brackets) closed all ]
+  // before all }, producing structurally invalid JSON for nested objects in arrays.
+  const stack: string[] = [];
   let inString = false;
   let escape = false;
 
@@ -805,22 +806,18 @@ function repairTruncatedJSON(s: string): string {
     if (ch === '\\' && inString) { escape = true; continue; }
     if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
-    if (ch === '{') braces++;
-    else if (ch === '}') braces--;
-    else if (ch === '[') brackets++;
-    else if (ch === ']') brackets--;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') stack.pop();
   }
 
-  // Remove trailing incomplete token (comma, colon, partial string)
   let trimmed = s.trimEnd();
-  // Remove trailing comma before we close
-  trimmed = trimmed.replace(/,\s*$/, '');
-  // If we ended mid-string, close it
-  if (inString) trimmed += '"';
+  trimmed = trimmed.replace(/,\s*$/, '');   // strip trailing comma
+  if (inString) trimmed += '"';             // close open string
 
-  // Close open brackets/braces in reverse order
-  for (let i = 0; i < brackets; i++) trimmed += ']';
-  for (let i = 0; i < braces; i++) trimmed += '}';
+  // Close in reverse order of opening — this is the critical fix
+  for (let i = stack.length - 1; i >= 0; i--) {
+    trimmed += stack[i] === '{' ? '}' : ']';
+  }
 
   return trimmed;
 }
@@ -904,10 +901,12 @@ function cleanRecommendation(rec: Record<string, unknown>): Record<string, unkno
   }
 
   // ─── COST RECONCILIATION ──────────────────────────────────────────────
-  // The AI sometimes invents equipment_cost_myr that doesn't match the BOM sum.
-  // We ALWAYS recompute equipment cost from the actual components, and rebuild
-  // total_cost_myr from the verified breakdown. Truth comes from the BOM, not the AI.
-  reconcileCosts(cleaned);
+  // Wrapped in try/catch — a cost calculation bug must never kill a valid BOM.
+  try {
+    reconcileCosts(cleaned);
+  } catch (e) {
+    console.warn('[cleanRecommendation] reconcileCosts threw — skipping cost reconciliation:', e instanceof Error ? e.message : String(e));
+  }
 
   return cleaned;
 }
@@ -1264,9 +1263,11 @@ export async function POST(request: NextRequest) {
     const fallbackSlice = models.slice(2);
 
     const raceResult = await Promise.any(
-      raceSlice.map((cfg) =>
-        generateWithModel(input, cfg).then((rec) => ({ rec, cfg })),
-      ),
+      raceSlice.map((cfg) => {
+        const p = generateWithModel(input, cfg).then((rec) => ({ rec, cfg }));
+        p.catch(() => {}); // suppress unhandled rejection from race loser
+        return p;
+      }),
     ).catch(() => null); // both failed → null, fall through to sequential
 
     if (raceResult) {
@@ -1275,10 +1276,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Phase 2: sequential fallback through remaining providers ──────────
+    // Give slower providers (Gemini, Mistral, Chutes) 20s — more than the 12s
+    // race timeout, since these are last-resort and correctness > speed here.
     let lastError: unknown;
     for (const cfg of fallbackSlice) {
       try {
-        const recommendation = await generateWithModel(input, cfg);
+        const recommendation = await generateWithModel(input, cfg, 20000);
         return finalize(recommendation, input);
       } catch (err) {
         lastError = err;

@@ -318,14 +318,6 @@ function getGeminiClient() {
   });
 }
 
-function getCerebrasClient() {
-  return new OpenAI({
-    apiKey: process.env.CEREBRAS_API_KEY!,
-    baseURL: 'https://api.cerebras.ai/v1',
-    maxRetries: 0,
-  });
-}
-
 function getGroqClient() {
   return new OpenAI({
     apiKey: process.env.GROQ_API_KEY!,
@@ -497,8 +489,7 @@ Safety: safety shower + eyewash (chem/acid/caustic), fire & gas detectors (flamm
 
 SELF-CHECK: Can the system start up, run, be isolated for maintenance, drained, vented, instrumented, controlled, overpressure-protected, and safely shut down — using only your listed components? If not, add the missing items.
 
-10. HAZOP — apply standard guidewords across main process line + nodes (suction, discharge, control valve, vessels, HX). Generate a distinct risk entry for each realistic guideword:
-NO FLOW (blockage/closed valve/pump trip), MORE FLOW (control valve fails open), LESS FLOW (partial block/fouled strainer), REVERSE FLOW (check valve fail), MORE PRESSURE (blocked discharge/thermal expansion/PSV fail), LESS PRESSURE (cavitation/starvation), MORE TEMP (cooling loss/runaway), LESS TEMP (heating loss/freeze), CONTAMINATION (wrong fluid/cross-connect/corrosion products), LEAK/RELEASE (flange/seal/rupture), LOSS OF UTILITY (power/instrument air/cooling), MAINTENANCE (LOTO failure), CORROSION/EROSION (incompatible material/high velocity), ELECTRICAL FAULT (short/VFD/earth — BOMBA).
+10. HAZOP — apply standard guidewords across main process line + nodes (suction, discharge, control valve, vessels, HX). Generate a distinct risk entry for each: NO FLOW, MORE FLOW, LESS FLOW, REVERSE FLOW, MORE PRESSURE, LESS PRESSURE, MORE TEMP, LESS TEMP, CONTAMINATION, LEAK/RELEASE, LOSS OF UTILITY, MAINTENANCE, CORROSION/EROSION, ELECTRICAL FAULT.
 TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967, BOMBA UBBL, SIRIM, or DOE in mitigations where applicable.
 
 11. MANDATORY blocks — never null/empty:
@@ -600,38 +591,19 @@ Return ONLY this JSON. components is generated FIRST so it cannot be truncated b
   },
   "process_flow": {
     "nodes": [
-      { "id": "T-101",   "label": "Feed Tank",          "type": "vessel" },
-      { "id": "SV-101",  "label": "Suction Isolation",  "type": "valve" },
-      { "id": "ST-101",  "label": "Y-Strainer",         "type": "fitting" },
-      { "id": "P-101",   "label": "Pump P-101 (duty)",  "type": "pump" },
-      { "id": "P-102",   "label": "Pump P-102 (standby)", "type": "pump" },
-      { "id": "CV-101",  "label": "Check Valve",        "type": "valve" },
-      { "id": "PT-101",  "label": "Pressure TX",        "type": "instrument" },
-      { "id": "FT-101",  "label": "Flow TX",            "type": "instrument" },
-      { "id": "DV-101",  "label": "Discharge Valve",    "type": "valve" },
-      { "id": "PSV-101", "label": "PSV (relief)",       "type": "valve" },
-      { "id": "HX-101",  "label": "Heat Exchanger",     "type": "equipment" },
-      { "id": "TT-101",  "label": "Temp TX",            "type": "instrument" },
-      { "id": "CV-102",  "label": "Control Valve",      "type": "valve" },
-      { "id": "EV-101",  "label": "Expansion Vessel",   "type": "vessel" },
-      { "id": "DEST",    "label": "Process Destination", "type": "vessel" }
+      { "id": "T-101",  "label": "Feed Tank",         "type": "vessel" },
+      { "id": "SV-101", "label": "Suction Isolation", "type": "valve" },
+      { "id": "P-101",  "label": "Pump (duty)",       "type": "pump" },
+      { "id": "FT-101", "label": "Flow TX",           "type": "instrument" },
+      { "id": "PSV-101","label": "PSV (relief)",      "type": "valve" },
+      { "id": "DEST",   "label": "Process Dest",      "type": "vessel" }
     ],
     "edges": [
-      { "from": "T-101",  "to": "SV-101",  "label": "DN100 SS316L" },
-      { "from": "SV-101", "to": "ST-101" },
-      { "from": "ST-101", "to": "P-101" },
-      { "from": "ST-101", "to": "P-102" },
-      { "from": "P-101",  "to": "CV-101" },
-      { "from": "P-102",  "to": "CV-101" },
-      { "from": "CV-101", "to": "PT-101" },
-      { "from": "PT-101", "to": "FT-101" },
-      { "from": "FT-101", "to": "DV-101" },
-      { "from": "DV-101", "to": "PSV-101" },
-      { "from": "PSV-101","to": "HX-101" },
-      { "from": "HX-101", "to": "TT-101" },
-      { "from": "TT-101", "to": "CV-102" },
-      { "from": "CV-102", "to": "EV-101" },
-      { "from": "EV-101", "to": "DEST" }
+      { "from": "T-101",  "to": "SV-101", "label": "DN100 SS316L" },
+      { "from": "SV-101", "to": "P-101" },
+      { "from": "P-101",  "to": "FT-101" },
+      { "from": "FT-101", "to": "PSV-101" },
+      { "from": "PSV-101","to": "DEST" }
     ]
   },
   "piping": {
@@ -645,9 +617,7 @@ Return ONLY this JSON. components is generated FIRST so it cannot be truncated b
   },
   "instrumentation": [
     { "tag": "FT-101", "description": "Flow Transmitter — Main Line", "type": "flow", "service": "monitor flow", "range": "0-100 m³/hr", "material": "lined body, SS electrodes", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
-    { "tag": "PT-101", "description": "Pressure Transmitter — Pump Discharge", "type": "pressure", "service": "discharge pressure", "range": "0-10 bar(g)", "material": "SS316 wetted", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
-    { "tag": "PT-102", "description": "Pressure Transmitter — Pump Suction", "type": "pressure", "service": "suction pressure", "range": "0-10 bar(g)", "material": "SS316 wetted", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 },
-    { "tag": "TT-101", "description": "Temperature Transmitter", "type": "temperature", "service": "process temp", "range": "0-100°C", "material": "SS316 thermowell", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 }
+    { "tag": "PT-101", "description": "Pressure Transmitter — Pump Discharge", "type": "pressure", "service": "discharge pressure", "range": "0-10 bar(g)", "material": "SS316 wetted", "supplier": "Malaysian supplier + city", "unit_cost_myr": 0 }
   ],
   "risk_assessment": {
     "overall_risk_level": "low|medium|high|critical",
@@ -1003,7 +973,7 @@ function validateRecommendation(rec: Record<string, unknown>): Record<string, un
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'cerebras' | 'mistral' | 'sambanova' | 'groq';
+  provider: 'chutes' | 'gemini' | 'mistral' | 'sambanova' | 'groq';
   model: string;
   max_tokens: number;
 }
@@ -1042,7 +1012,6 @@ function buildModelRoster(): ModelConfig[] {
 
 function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'chutes') return getChutesClient();
-  if (cfg.provider === 'cerebras') return getCerebrasClient();
   if (cfg.provider === 'mistral') return getMistralClient();
   if (cfg.provider === 'sambanova') return getSambaNovaClient();
   if (cfg.provider === 'groq') return getGroqClient();

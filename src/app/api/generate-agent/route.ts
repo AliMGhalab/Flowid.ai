@@ -69,13 +69,21 @@ function buildAgentChain(): AgentProvider[] {
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #5 Mistral Large — different infra fallback
+  // #4 Qwen3.6 27B — even smaller Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen27', model: 'Qwen/Qwen3.6-27B-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #5 MiniMax M2.5 — Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-minimax', model: 'MiniMaxAI/MiniMax-M2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #6 Mistral Large — different infra fallback
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // #6 Gemini 2.0 Flash — Google infra, last resort
+  // #7 Gemini 2.5 Flash — Google infra, last resort
   if (process.env.GEMINI_API_KEY) {
-    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
+    chain.push({ provider: 'gemini', model: 'gemini-2.5-flash', client: getGeminiClient(), max_tokens: 8000 });
   }
   return chain;
 }

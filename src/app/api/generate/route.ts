@@ -973,7 +973,7 @@ function validateRecommendation(rec: Record<string, unknown>): Record<string, un
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'mistral' | 'sambanova' | 'groq';
+  provider: 'chutes' | 'gemini' | 'mistral' | 'sambanova' | 'groq' | 'sambanova-ds';
   model: string;
   max_tokens: number;
 }
@@ -981,30 +981,48 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // #1 Groq Llama 3.3 70B — LPU silicon, ~50ms/call. 12k TPM bucket.
+  // RACE (slots 0-2) — fastest providers, run in parallel
+  // #1 Groq Llama 3.3 70B — LPU silicon, ~280 tok/s. 12k TPM bucket.
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 5000 });
   }
-  // #1b Groq Llama 3.1 8B — separate TPM bucket. Context window is 8192 tokens;
-  // prompt ~4k + max_tokens 3k = 7k, safely under the 8192 limit.
+  // #2 Groq Llama 3.1 8B — separate TPM bucket, 560 tok/s. Context 8192; keep under limit.
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 3000 });
   }
-  // #3 Gemini 2.0 Flash — Google infra, independent rate-limit bucket.
-  if (process.env.GEMINI_API_KEY) {
-    roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
+  // #3 Groq GPT-OSS 20B — 1000 tok/s, separate bucket
+  if (process.env.GROQ_API_KEY) {
+    roster.push({ provider: 'groq', model: 'openai/gpt-oss-20b', max_tokens: 6000 });
   }
-  // #4 Mistral Medium — native JSON mode, different vendor
+
+  // SEQUENTIAL FALLBACK (slot 3+)
+  // #4 Gemini 2.5 Flash — Google infra, independent rate-limit bucket
+  if (process.env.GEMINI_API_KEY) {
+    roster.push({ provider: 'gemini', model: 'gemini-2.5-flash', max_tokens: 8000 });
+  }
+  // #5 Mistral Medium — native JSON mode, different vendor
   if (process.env.MISTRAL_API_KEY) {
     roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 8000 });
   }
-  // #5 SambaNova — Llama 3.3 70B max output is 4096 tokens
+  // #6 SambaNova Llama 3.3 70B — max output 4096 tokens
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 4096 });
   }
-  // #6 Chutes DeepSeek V3 — DeepSeek V3 max output is 8192 tokens; sending >8192 causes 400
+  // #7 SambaNova DeepSeek V3.2
+  if (process.env.SAMBANOVA_API_KEY) {
+    roster.push({ provider: 'sambanova', model: 'DeepSeek-V3.2', max_tokens: 4096 });
+  }
+  // #8 SambaNova Llama 4 Maverick
+  if (process.env.SAMBANOVA_API_KEY) {
+    roster.push({ provider: 'sambanova', model: 'Llama-4-Maverick-17B-128E-Instruct', max_tokens: 4096 });
+  }
+  // #9 Chutes DeepSeek V3.2 TEE
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 8000 });
+  }
+  // #10 Chutes Qwen3.6 27B TEE — smaller, faster Chutes fallback
+  if (process.env.CHUTES_API_KEY) {
+    roster.push({ provider: 'chutes', model: 'Qwen/Qwen3.6-27B-TEE', max_tokens: 8000 });
   }
 
   return roster;
@@ -1056,7 +1074,7 @@ async function generateWithModel(
   try {
     // response_format json_object is only supported by Groq, Cerebras, Gemini, Mistral.
     // Chutes and SambaNova return 400 if this param is sent.
-    const supportsJsonMode = ['groq', 'cerebras', 'gemini', 'mistral'].includes(cfg.provider);
+    const supportsJsonMode = ['groq', 'gemini', 'mistral'].includes(cfg.provider);
 
     const completion = await client.chat.completions.create(
       {
@@ -1123,8 +1141,8 @@ export async function POST(request: NextRequest) {
     // ── Phase 1: race the top 2 providers in parallel ──────────────────────
     // Fast providers (Groq ~200ms, Cerebras ~1s) answer almost instantly.
     // If Groq 413s, Cerebras is already running — no extra wait.
-    const raceSlice = models.slice(0, 2);
-    const fallbackSlice = models.slice(2);
+    const raceSlice = models.slice(0, 3);
+    const fallbackSlice = models.slice(3);
 
     const raceResult = await Promise.any(
       raceSlice.map((cfg) => {

@@ -1073,29 +1073,16 @@ function reconcileCosts(rec: Record<string, unknown>): void {
 function validateRecommendation(rec: Record<string, unknown>): Record<string, unknown> {
   const cleaned = cleanRecommendation(rec);
 
-  // Only hard-reject a completely empty BOM — anything else we accept and warn.
-  const components = Array.isArray(cleaned.components) ? cleaned.components : [];
-  if (components.length === 0) {
+  // Guarantee minimum fields so the UI never crashes
+  if (!Array.isArray(cleaned.components)) cleaned.components = [];
+  if (!cleaned.summary) cleaned.summary = 'AI-generated fluid system design';
+  if (!cleaned.system_type) cleaned.system_type = 'Industrial fluid system';
+
+  // Only hard-reject if there are literally zero components after cleaning
+  if ((cleaned.components as unknown[]).length === 0) {
     throw new Error('AI response has no usable components (BOM is empty)');
   }
-  if (!cleaned.summary || typeof cleaned.summary !== 'string') {
-    cleaned.summary = 'AI-generated fluid system design';
-  }
-  if (!cleaned.system_type || typeof cleaned.system_type !== 'string') {
-    cleaned.system_type = 'Industrial fluid system';
-  }
 
-  // Try Zod parse to apply transforms/defaults. If it fails on a non-critical field,
-  // log it and return the cleaned object anyway — better imperfect output than no output.
-  const result = RecommendationSchema.safeParse(cleaned);
-  if (result.success) {
-    return result.data as Record<string, unknown>;
-  }
-
-  // Non-critical schema mismatch — log and continue with cleaned (not Zod-transformed) data
-  const allIssues = result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
-  console.warn(`[validation] ${allIssues.length} non-critical schema mismatch(es) — accepting anyway:`);
-  allIssues.slice(0, 5).forEach((m) => console.warn(`  - ${m}`));
   return cleaned;
 }
 
@@ -1117,7 +1104,7 @@ function buildModelRoster(): ModelConfig[] {
   // #1 Groq Llama 3.3 70B — LPU silicon, ~50ms/call. Hits 12k TPM with large prompts
   // so kept first (usually succeeds on first attempt of the session).
   if (process.env.GROQ_API_KEY) {
-    roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
+    roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 5000 });
   }
   // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier.
   // Model name is 'llama3.3-70b' (no hyphen after llama, confirmed Cerebras API name).

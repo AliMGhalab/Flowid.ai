@@ -176,7 +176,7 @@ export async function runAgentLoop(
     // tool_choice "required" is unsupported on Mistral and some other providers.
     // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
     const iterController = new AbortController();
-    const iterTimer = setTimeout(() => iterController.abort(), 12_000); // 12s per iteration keeps 8 iters inside 75s budget
+    const iterTimer = setTimeout(() => iterController.abort(), 20_000); // 20s per iteration — large TEE models need ~15s cold start
     let completion;
     try {
       completion = await cfg.client.chat.completions.create(
@@ -193,8 +193,8 @@ export async function runAgentLoop(
     } catch (e) {
       clearTimeout(iterTimer);
       if (iterController.signal.aborted) {
-        console.warn(`[agentLoop] iter ${iter} aborted at 25s on ${cfg.model}`);
-        throw new Error(`Agent provider ${cfg.model} stalled past 25s`);
+        console.warn(`[agentLoop] iter ${iter} aborted at 20s on ${cfg.model}`);
+        throw new Error(`Agent provider ${cfg.model} stalled past 20s`);
       }
       throw e;
     }

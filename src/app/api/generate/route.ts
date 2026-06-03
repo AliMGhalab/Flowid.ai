@@ -1176,12 +1176,13 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Phase 2: sequential fallback through remaining providers ──────────
-    // Give slower providers (Gemini, Mistral, Chutes) 20s — more than the 12s
-    // race timeout, since these are last-resort and correctness > speed here.
+    // Chutes DeepSeek needs 25-35s to generate a full JSON — give it 35s.
+    // Other providers (Gemini, Mistral, SambaNova) get 20s.
     let lastError: unknown;
     for (const cfg of fallbackSlice) {
+      const timeout = cfg.provider === 'chutes' ? 35000 : 20000;
       try {
-        const recommendation = await generateWithModel(input, cfg, 20000);
+        const recommendation = await generateWithModel(input, cfg, timeout);
         return finalize(recommendation, input);
       } catch (err) {
         lastError = err;

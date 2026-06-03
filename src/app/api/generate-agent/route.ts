@@ -66,30 +66,34 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // ─── AGENT CHAIN — deliberately EXCLUDES Groq and Cerebras ───────────────
-  // Classic path owns Groq (12k TPM) and Cerebras. If agent also used them,
-  // both paths would compete on the same rate-limit buckets and both would 429.
-  // Agent uses fully independent provider infrastructure.
+  // ─── AGENT CHAIN — Chutes Pro models PRIMARY ──────────────────────────────
+  // Chutes Pro account has no hard rate limits. These models support tool
+  // calling (confirmed via /v1/models endpoint). Classic path uses Groq/Cerebras
+  // so there is zero overlap on rate-limit buckets.
 
-  // #1 Mistral Large — Mistral's own infra, excellent tool calling, ~3-8s/call
-  if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
+  // #1 Kimi K2.6 — Moonshot AI's latest, strong tool calling, reasoning
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-kimi', model: 'moonshotai/Kimi-K2.6-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #2 Gemini 2.0 Flash — Google infra, independent from everyone else
-  if (process.env.GEMINI_API_KEY) {
-    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
+  // #2 Qwen3.5 397B — massive model, excellent instruction following
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen397', model: 'Qwen/Qwen3.5-397B-A17B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #3 SambaNova — fast hardware, different infra from Mistral/Gemini
-  if (process.env.SAMBANOVA_API_KEY) {
-    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
+  // #3 Kimi K2.5 — backup Kimi
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-kimi2', model: 'moonshotai/Kimi-K2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #4 Chutes DeepSeek V3 — paid Pro account, high quality
+  // #4 DeepSeek V3.2 — strong quality, known tool calling support
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #5 Groq — last resort only; classic path has likely already used its TPM budget
-  if (process.env.GROQ_API_KEY) {
-    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 2500 });
+  // #5 Mistral Large — different infra fallback
+  if (process.env.MISTRAL_API_KEY) {
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
+  }
+  // #6 Gemini 2.0 Flash — Google infra, last resort
+  if (process.env.GEMINI_API_KEY) {
+    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
   }
   return chain;
 }

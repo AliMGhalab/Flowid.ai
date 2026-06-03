@@ -382,12 +382,12 @@ export default function NewProjectPage() {
         }
       }
 
-      // Sequenced agent progress reveal — gives the user a multi-agent pipeline view
-      timers.push(setTimeout(() => { setAgentStep(1); setStatusMsg('BOM Agent selecting Malaysian suppliers…'); }, 6000));
-      timers.push(setTimeout(() => { setAgentStep(2); setStatusMsg('Hydraulics Agent computing NPSH, head, Reynolds…'); }, 14000));
-      timers.push(setTimeout(() => { setAgentStep(3); setStatusMsg('HAZOP Agent applying risk guidewords…'); }, 22000));
-      timers.push(setTimeout(() => { setAgentStep(4); setStatusMsg('Cost Agent rolling up MYR + transportation…'); }, 30000));
-      timers.push(setTimeout(() => { setAgentStep(5); setStatusMsg('Validation Layer: schema + sanity checks…'); }, 38000));
+      // Sequenced progress messages — cosmetic timers, not real server events
+      timers.push(setTimeout(() => { setAgentStep(1); setStatusMsg('Selecting Malaysian suppliers and sizing equipment…'); }, 6000));
+      timers.push(setTimeout(() => { setAgentStep(2); setStatusMsg('Computing hydraulics — NPSH, head, Reynolds number…'); }, 14000));
+      timers.push(setTimeout(() => { setAgentStep(3); setStatusMsg('Running HAZOP risk analysis…'); }, 22000));
+      timers.push(setTimeout(() => { setAgentStep(4); setStatusMsg('Reconciling costs in MYR…'); }, 30000));
+      timers.push(setTimeout(() => { setAgentStep(5); setStatusMsg('Finalising design — almost ready…'); }, 38000));
 
       // Primary endpoint depends on the agent toggle
       const primaryEndpoint = useAgentMode ? '/api/generate-agent' : '/api/generate';

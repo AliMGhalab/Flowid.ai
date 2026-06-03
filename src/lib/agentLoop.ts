@@ -176,7 +176,7 @@ export async function runAgentLoop(
     // tool_choice "required" is unsupported on Mistral and some other providers.
     // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
     const iterController = new AbortController();
-    const iterTimer = setTimeout(() => iterController.abort(), 25_000);
+    const iterTimer = setTimeout(() => iterController.abort(), 30_000);
     let completion;
     try {
       completion = await cfg.client.chat.completions.create(

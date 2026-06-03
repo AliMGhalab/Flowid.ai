@@ -66,39 +66,30 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // ─── ORDER: speed × reliability × INDEPENDENT rate-limit buckets ──────────
-  //
-  // GROQ TPM = 12,000 tokens/min. Agent system prompt ≈ 1,500 tokens + growing
-  // message history ≈ 2,000+ tokens/call. max_tokens=2500 keeps each call under
-  // 4,500 tokens → 2+ calls fit in the 12k window without a 413/429.
-  //
-  // Gemini is a completely different infra (Google) — 15 req/min free tier,
-  // no TPM-style limit, so it's the cleanest fallback when everything else 429s.
+  // ─── AGENT CHAIN — deliberately EXCLUDES Groq and Cerebras ───────────────
+  // Classic path owns Groq (12k TPM) and Cerebras. If agent also used them,
+  // both paths would compete on the same rate-limit buckets and both would 429.
+  // Agent uses fully independent provider infrastructure.
 
-  // #1 Groq — LPU, ~50ms/call. Reduced tokens to stay under 12k TPM.
-  if (process.env.GROQ_API_KEY) {
-    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 2500 });
-  }
-  // #2 Gemini 2.0 Flash — Google infra, completely independent from all others.
-  // Supports function calling via OpenAI-compatible endpoint.
-  if (process.env.GEMINI_API_KEY) {
-    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
-  }
-  // #3 Mistral Large — Mistral's own infra, good tool calling quality
+  // #1 Mistral Large — Mistral's own infra, excellent tool calling, ~3-8s/call
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // #4 SambaNova — fast hardware but frequent 429s
+  // #2 Gemini 2.0 Flash — Google infra, independent from everyone else
+  if (process.env.GEMINI_API_KEY) {
+    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
+  }
+  // #3 SambaNova — fast hardware, different infra from Mistral/Gemini
   if (process.env.SAMBANOVA_API_KEY) {
     chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
   }
-  // #5 Chutes DeepSeek V3 — paid Pro, good quality
+  // #4 Chutes DeepSeek V3 — paid Pro account, high quality
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #6 Chutes Qwen3-32B — smaller, faster than DeepSeek but same infra
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
+  // #5 Groq — last resort only; classic path has likely already used its TPM budget
+  if (process.env.GROQ_API_KEY) {
+    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 2500 });
   }
   return chain;
 }

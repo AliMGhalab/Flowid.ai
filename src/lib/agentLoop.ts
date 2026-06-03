@@ -70,6 +70,12 @@ RECOMMENDED TOOL SEQUENCE — keep it to ≤8 tool calls:
 
 You have a HARD LIMIT of 10 tool calls. Batch your work. Do not waste round-trips.
 
+COMPACT OUTPUT CONTRACT for finalize_design — your recommendation must fit in one tool call:
+• All text fields (specification, notes, lifespan_notes, price_basis, design_basis): MAX 12 WORDS each.
+• alternatives: [] — always empty. Never populate alternatives.
+• A complete BOM of 15 compact components is worth more than 5 verbose ones.
+• Keep risks terse: hazard + cause (1 phrase each). Keep process_flow node labels short (≤4 words).
+
 OUTPUT FIELD NAMES in finalize_design.recommendation:
   summary, system_type, design_basis, overall_confidence, process_parameters, engineering_calculations,
   process_flow (nodes + edges), components (id/name/category/quantity/specification/material/supplier/model/unit_cost_myr/total_cost_myr/notes/confidence_level/lifespan_years/price_basis),
@@ -86,7 +92,7 @@ You are an AGENT. Do the work. Do not shortcut the BOM.`;
 // Vercel function ceiling is 120s. At ~10s per tool round-trip, 25 iterations
 // blows past the budget. Capped at 10 so the agent finishes within the window.
 const MAX_ITERATIONS = 10;
-const MAX_TOOL_RESULT_SIZE = 12000; // chars — truncate huge tool outputs
+const MAX_TOOL_RESULT_SIZE = 20000; // chars — finalize_design JSON can be 10-15k; keep it intact
 
 function truncate(s: string, max = MAX_TOOL_RESULT_SIZE): string {
   if (s.length <= max) return s;
@@ -179,7 +185,7 @@ export async function runAgentLoop(
           messages,
           tools: AGENT_TOOLS,
           tool_choice: 'auto',
-          max_tokens: cfg.max_tokens ?? 6000,
+          max_tokens: cfg.max_tokens ?? 8000,
           temperature: 0.1,
         },
         { signal: iterController.signal },
@@ -197,17 +203,17 @@ export async function runAgentLoop(
     const msg = completion.choices[0]?.message;
     if (!msg) break;
 
-    // No tool calls → model wants to finalise via text. Push it and try to coerce next round.
+    // No tool calls → model wants to finalise via text. Push it back every iteration
+    // until we hit the ceiling (we never accept a text-only response as a valid finalize).
     if (!msg.tool_calls || msg.tool_calls.length === 0) {
       messages.push({ role: 'assistant', content: msg.content ?? '' });
-      // If we've run a fair number of iterations, accept the text and stop
-      if (iter >= 2) {
-        // No finalize_design called — treat as failure
+      if (iter >= MAX_ITERATIONS - 1) {
+        // Last chance — treat as failure
         break;
       }
       messages.push({
         role: 'user',
-        content: 'You must call a tool. If the design is complete, call finalize_design with the full recommendation. Otherwise call the next tool you need.',
+        content: 'You MUST call a tool. Do NOT return plain text. If the design is complete, call finalize_design with the full recommendation object. Otherwise call the next tool in the sequence.',
       });
       continue;
     }
@@ -264,7 +270,7 @@ export async function runAgentLoop(
             content: JSON.stringify({
               status: 'REJECTED — your recommendation is incomplete. Do not call finalize_design yet.',
               issues,
-              instruction: 'Expand the BOM to cover ALL system components (pumps with seals + couplings, suction/discharge/check/PSV/control/drain/vent valves, headers + expansion vessel, piping/fittings/supports, ALL instruments FT/PT/TT/LT, MCC + control panel + cables + earthing, skid + bund, safety devices, commissioning items). Then add ≥15 HAZOP risk entries covering the standard guidewords. Then add piping spec, instrumentation list with tags, cost_estimate, process_flow (≥10 nodes), maintenance_schedule, compliance_standards, recommended_vendors. THEN call finalize_design with the complete recommendation. Use your tools more — call lookup_malaysian_suppliers for each category, reconcile_costs_aace once you have the full BOM.',
+              instruction: 'Expand the BOM to cover ALL system components (pumps with seals + couplings, suction/discharge/check/PSV/control/drain/vent valves, headers + expansion vessel, piping/fittings/supports, ALL instruments FT/PT/TT/LT, MCC + control panel + cables + earthing, skid + bund, safety devices, commissioning items). Then add ≥15 HAZOP risk entries covering the standard guidewords. Then add piping spec, instrumentation list with tags, cost_estimate, process_flow (≥8 nodes), maintenance_schedule, compliance_standards, recommended_vendors. THEN call finalize_design with the complete recommendation. If you have not yet called lookup_malaysian_suppliers, call it ONCE with ALL categories in a single "categories" array — do NOT make multiple calls.',
             }),
           } as OpenAI.Chat.Completions.ChatCompletionMessageParam);
         }

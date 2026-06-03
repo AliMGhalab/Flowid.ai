@@ -16,7 +16,16 @@
       "WebSearch",
       "WebFetch(domain:www.typingmind.com)",
       "Bash(curl -s -k -H 'Authorization: Bearer cpk_00ff338080ef4f419acd08607e571715.88e2936ef63e5b8493dffecc361b8352.anBibCNPKmE5aZ7zq6hprOWhV9MOLKmB' https://llm.chutes.ai/v1/models)",
-      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['id']\\) for m in data.get\\('data',[]\\)]\")"
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['id']\\) for m in data.get\\('data',[]\\)]\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s \"https://llm.chutes.ai/v1/models\" -H \"Authorization: Bearer cpk_00ff338080ef4f419acd08607e571715.88e2936ef63e5b8493dffecc361b8352.anBibCNPKmE5aZ7zq6hprOWhV9MOLKmB\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['id']\\) for m in data.get\\('data',[]\\)]\")",
+      "Bash(git push *)",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('Sheet:', !!l.Sheet, 'FileSpreadsheet:', !!l.FileSpreadsheet, 'Table2:', !!l.Table2\\)\")",
+      "Bash(git commit *)",
+      "PowerShell($response = Invoke-WebRequest -Uri \"https://flowid-ai.vercel.app/login\" -Method Head -UseBasicParsing; $response.Headers | Format-Table -AutoSize)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://flowid-ai.vercel.app/login\" -Method Head -UseBasicParsing; Write-Output \"CSP header present: $\\($r.Headers.ContainsKey\\('Content-Security-Policy'\\)\\)\"; Write-Output \"Age: $\\($r.Headers['Age']\\)\"; Write-Output \"Cache: $\\($r.Headers['X-Vercel-Cache']\\)\")"
     ]
   }
 }

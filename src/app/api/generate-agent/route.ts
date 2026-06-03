@@ -19,7 +19,7 @@ import { checkInputGuardrail, checkOutputGuardrail } from '@/lib/agentGuardrails
 
 export const maxDuration = 120;
 
-// ── Provider clients (DeepSeek V3 via Chutes is best at tool calling) ─────
+// ── Provider clients ───────────────────────────────────────────────────────
 
 function getChutesClient() {
   return new OpenAI({
@@ -49,6 +49,13 @@ function getGroqClient() {
     maxRetries: 0,
   });
 }
+function getGeminiClient() {
+  return new OpenAI({
+    apiKey: process.env.GEMINI_API_KEY!,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    maxRetries: 0,
+  });
+}
 
 interface AgentProvider {
   provider: string;
@@ -59,31 +66,39 @@ interface AgentProvider {
 
 function buildAgentChain(): AgentProvider[] {
   const chain: AgentProvider[] = [];
-  // ─── ORDER OPTIMISED BY: speed × reliability × infrastructure diversity ──
-  // Tested 2026-06-02: each provider's tool-calling support was verified
-  // with a sample tool. This order minimises the chance of 504 timeouts
-  // (each iteration in the agent loop is bounded by 25s).
+  // ─── ORDER: speed × reliability × INDEPENDENT rate-limit buckets ──────────
+  //
+  // GROQ TPM = 12,000 tokens/min. Agent system prompt ≈ 1,500 tokens + growing
+  // message history ≈ 2,000+ tokens/call. max_tokens=2500 keeps each call under
+  // 4,500 tokens → 2+ calls fit in the 12k window without a 413/429.
+  //
+  // Gemini is a completely different infra (Google) — 15 req/min free tier,
+  // no TPM-style limit, so it's the cleanest fallback when everything else 429s.
 
-  // #1 Groq Llama 3.3 70B — 50ms per call. Different LPU silicon. PRIMARY.
+  // #1 Groq — LPU, ~50ms/call. Reduced tokens to stay under 12k TPM.
   if (process.env.GROQ_API_KEY) {
-    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 6000 });
+    chain.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', client: getGroqClient(), max_tokens: 2500 });
   }
-  // #2 Chutes Qwen3-32B — paid Pro account, smaller model = faster, separate infra from Mistral/SambaNova
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 6000 });
+  // #2 Gemini 2.0 Flash — Google infra, completely independent from all others.
+  // Supports function calling via OpenAI-compatible endpoint.
+  if (process.env.GEMINI_API_KEY) {
+    chain.push({ provider: 'gemini', model: 'gemini-2.0-flash', client: getGeminiClient(), max_tokens: 8000 });
   }
-  // #3 Mistral Large — Mistral's own infra. Good tool calling quality, ~3-6s per call.
+  // #3 Mistral Large — Mistral's own infra, good tool calling quality
   if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 6000 });
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
   }
-  // #4 SambaNova Llama 3.3 70B — fast hardware but frequent 429s, so 4th not 2nd
+  // #4 SambaNova — fast hardware but frequent 429s
   if (process.env.SAMBANOVA_API_KEY) {
-    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 6000 });
+    chain.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', client: getSambaNovaClient(), max_tokens: 8000 });
   }
-  // #5 + #6 More Chutes models — last because shared infrastructure with #2
+  // #5 Chutes DeepSeek V3 — paid Pro, good quality
   if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-glm',      model: 'zai-org/GLM-5.1-TEE',            client: getChutesClient(), max_tokens: 6000 });
-    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE',  client: getChutesClient(), max_tokens: 6000 });
+    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #6 Chutes Qwen3-32B — smaller, faster than DeepSeek but same infra
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
   return chain;
 }

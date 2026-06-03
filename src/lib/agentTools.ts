@@ -182,12 +182,44 @@ export const AGENT_TOOLS = [
 // ── Tool implementations ───────────────────────────────────────────────────
 
 function approxWaterDensity(tempC: number): number {
-  // Crude water density approximation: 1000 - 0.2(t-4) kg/m³
+  // Crude water density: 1000 - 0.2(t-4) kg/m³
   return 1000 - 0.2 * Math.max(0, tempC - 4);
 }
 function approxWaterViscosity(tempC: number): number {
-  // Crude water viscosity: ~10^-3 Pa·s at 20°C, decreases with temp
+  // Water viscosity: ~10^-3 Pa·s at 20°C, decreases with temp
   return 0.001 * Math.exp(-0.025 * Math.max(0, tempC - 25));
+}
+
+/** Returns [density_kg_m3, viscosity_Pa_s] for the given fluid and temperature */
+function getFluidProps(fluid: string | undefined, tempC: number): [number, number] {
+  const f = (fluid ?? '').toLowerCase();
+  // Palm / Crude Palm Oil (CPO): ρ≈920 kg/m³, viscosity drops steeply with temp
+  if (f.includes('palm') || f.includes('cpo')) {
+    const rho = 920 - 0.6 * Math.max(0, tempC - 25); // approx 920→882 over 25-90°C
+    // CPO viscosity (Pa·s): ~0.12 at 40°C, ~0.025 at 65°C, ~0.008 at 90°C
+    const mu = 0.0011 * Math.exp(3200 / (tempC + 273.15) - 3200 / 313.15) * 0.12;
+    return [Math.max(rho, 830), Math.max(mu, 0.005)];
+  }
+  // Steam / vapour: very low density, high velocity
+  if (f.includes('steam')) {
+    const rho = f.includes('hp') ? 15 : 5; // kg/m³ rough (saturated steam)
+    return [rho, 1.5e-5];
+  }
+  // Ammonia liquid: ρ≈682 kg/m³ at -10°C, viscosity ~0.15 mPa·s
+  if (f.includes('ammonia') || f.includes('nh3')) {
+    return [682 - 0.5 * (tempC + 10), 0.00015];
+  }
+  // Caustic soda / NaOH ~20%: ρ≈1220, μ≈1.5×water
+  if (f.includes('caustic') || f.includes('naoh')) {
+    return [1220, approxWaterViscosity(tempC) * 1.5];
+  }
+  // Acids (HCl, H2SO4 dilute): ρ≈1050-1100, μ≈water
+  if (f.includes('acid') || f.includes('hcl') || f.includes('h2so4')) {
+    return [1080, approxWaterViscosity(tempC)];
+  }
+  // Chilled water / cooling water — same as water
+  // Default: water
+  return [approxWaterDensity(tempC), approxWaterViscosity(tempC)];
 }
 
 export function tool_derive_process_parameters(args: {
@@ -254,8 +286,7 @@ export function tool_calculate_hydraulics(args: {
   const Dm = args.pipe_diameter_inch * 0.0254; // inch → m
   const area = Math.PI * (Dm / 2) ** 2;
   const v = Q / area; // m/s
-  const rho = approxWaterDensity(args.operating_temp_c);
-  const mu = approxWaterViscosity(args.operating_temp_c);
+  const [rho, mu] = getFluidProps(args.fluid, args.operating_temp_c);
   const Re = (rho * v * Dm) / mu;
   const regime = Re < 2300 ? 'laminar' : Re < 4000 ? 'transitional' : 'turbulent';
   // Swamee-Jain explicit friction factor for turbulent flow (roughness 0.046 mm carbon steel)

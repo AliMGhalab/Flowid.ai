@@ -570,9 +570,9 @@ INSTRUCTIONS:
 2. All costs in MYR. Use Malaysian market prices including SST.
 3. For suppliers: pick brands with offices or distributors nearest to ${state}. If in East Malaysia, account for extra logistics cost (10–15% premium). Calculate transportation cost separately as a line item based on shipment from supplier city to ${state}.
 4. Apply relevant Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS as applicable).
-5. For EVERY component, provide exactly 2 alternatives from DIFFERENT Malaysian suppliers with realistic MYR costs and confidence levels.
-6. For EVERY component assign a confidence_level (0–100) representing how confident you are this is the optimal choice for this specific application, fluid, and environment. Be honest — flag lower confidence when the application is unusual or specs are ambiguous.
-7. For EVERY component assign lifespan_years (expected service life before replacement/major overhaul under normal operating conditions in Malaysian climate) and lifespan_notes explaining key factors.
+5. SKIP the alternatives array for every component — leave "alternatives": [] to conserve output tokens for a complete BOM.
+6. For EVERY component assign confidence_level (0–100): how optimal this choice is for this fluid/environment.
+7. For EVERY component assign lifespan_years (service life before major overhaul in Malaysian climate).
 8. Assign overall_confidence (0–100) for the entire recommendation.
 9. COMPLETE BOM — procurement-ready, every physical item as its own line. Walk the P&ID from source to destination. Include all that apply (presence = engineering necessity; quantity = scale/budget):
 
@@ -629,7 +629,14 @@ PROCESS FLOW DIAGRAM (P&ID) — this drives a visual diagram. Quality requiremen
 - ΔP/L = f × (ρ × v²) / (2 × D), convert to bar/100m
 Use water properties at operating temperature; adjust for other fluids.
 
-Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the BOM (components array) is the MOST IMPORTANT section — generate it COMPLETELY with 12-20 components covering every P&ID category. Place it EARLY in your output so it cannot be truncated. If you must shorten anything, shorten the engineering_notes and budget_notes text — NEVER shorten the components list. Aim for tight 1-2 sentence text fields throughout, but a complete BOM with full specs.
+COMPACT OUTPUT CONTRACT — mandatory to fit a complete BOM in the token budget:
+• specification / notes / lifespan_notes / price_basis / design_basis / engineering_notes: MAX 12 WORDS each. Use short phrases, not sentences.
+• hazop_summary / basis fields: MAX 15 WORDS each.
+• alternatives: [] — always empty. Skip entirely.
+• A BOM with 15 compact components beats 5 verbose ones every time.
+• If approaching token limit: finish components, then risks. Never cut components short.
+
+Return ONLY this JSON. components is generated FIRST so it cannot be truncated by token limits:
 {
   "summary": "2-3 sentence system overview",
   "system_type": "system classification",
@@ -647,24 +654,21 @@ Return ONLY this JSON. CRITICAL TOKEN STRATEGY: the BOM (components array) is th
   "components": [
     {
       "id": "C-001",
-      "name": "descriptive component name",
-      "category": "pump|valve|filter|vessel|fitting|electrical|safety|other",
+      "name": "Centrifugal Pump — Duty",
+      "category": "pump",
       "quantity": 1,
-      "specification": "full tech spec: size, rating, material, performance",
-      "material": "material of construction + reason",
-      "supplier": "real Malaysian supplier + city",
-      "model": "real model/series example",
-      "unit_cost_myr": 0,
-      "total_cost_myr": 0,
-      "notes": "selection rationale + MY compliance note",
-      "confidence_level": 85,
+      "specification": "DN50, 7.5kW, SS316 casing, API 610",
+      "material": "SS316",
+      "supplier": "Grundfos Malaysia, Shah Alam",
+      "model": "CM 10-3",
+      "unit_cost_myr": 12000,
+      "total_cost_myr": 12000,
+      "notes": "API 610; DOSH-registered; tropicalised motor",
+      "confidence_level": 88,
       "lifespan_years": 15,
-      "lifespan_notes": "1 sentence on lifespan factors",
-      "price_basis": "e.g. 'Grundfos MY May 2026 list price'",
-      "alternatives": [
-        { "name": "alt name", "supplier": "alt MY supplier", "model": "alt model", "reason": "why viable", "unit_cost_myr": 0, "total_cost_myr": 0, "confidence_level": 78 },
-        { "name": "alt2 name", "supplier": "alt2 MY supplier", "model": "alt2 model", "reason": "why viable", "unit_cost_myr": 0, "total_cost_myr": 0, "confidence_level": 72 }
-      ]
+      "lifespan_notes": "SS316 body; MY humidity allowance",
+      "price_basis": "Grundfos MY 2026 list",
+      "alternatives": []
     }
   ],
   "engineering_calculations": {
@@ -1070,8 +1074,7 @@ function reconcileCosts(rec: Record<string, unknown>): void {
 function validateRecommendation(rec: Record<string, unknown>): Record<string, unknown> {
   const cleaned = cleanRecommendation(rec);
 
-  // HARD requirements only: we must have a name, system_type, and at least 1 component.
-  // Everything else: try to validate, but DON'T reject if non-critical fields are off.
+  // Only hard-reject a completely empty BOM — anything else we accept and warn.
   const components = Array.isArray(cleaned.components) ? cleaned.components : [];
   if (components.length === 0) {
     throw new Error('AI response has no usable components (BOM is empty)');
@@ -1112,24 +1115,30 @@ interface ModelConfig {
 function buildModelRoster(): ModelConfig[] {
   const roster: ModelConfig[] = [];
 
-  // Groq Llama 3.3 70B — PRIMARY. Custom LPU silicon, ~50ms per call. Different
-  // infrastructure from all other providers — won't share rate-limit buckets.
+  // #1 Groq Llama 3.3 70B — LPU silicon, ~50ms/call. Hits 12k TPM with large prompts
+  // so kept first (usually succeeds on first attempt of the session).
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
   }
-  // Cerebras Qwen 235B — second (fast, generous free tier)
+  // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier, 20k output.
+  // IMPORTANT: model MUST be 'llama-3.3-70b' (Cerebras API name, not HuggingFace ID).
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'qwen-3-235b-a22b-instruct-2507', max_tokens: 20000 });
+    roster.push({ provider: 'cerebras', model: 'llama-3.3-70b', max_tokens: 20000 });
   }
-  // Mistral Medium — third (different vendor, native JSON mode)
+  // #3 Gemini 2.0 Flash — completely different infra (Google), 15 req/min free,
+  // no TPM cap. Best fallback when Groq/Cerebras are rate-limited.
+  if (process.env.GEMINI_API_KEY) {
+    roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 16000 });
+  }
+  // #4 Mistral Medium — native JSON mode, different vendor
   if (process.env.MISTRAL_API_KEY) {
     roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
   }
-  // SambaNova Llama 3.3 70B — fourth (specialised fast hardware)
+  // #5 SambaNova Llama 3.3 70B — specialised hardware, frequent 429s
   if (process.env.SAMBANOVA_API_KEY) {
     roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 10000 });
   }
-  // Chutes DeepSeek V3 — fifth (paid tier, high quality)
+  // #6 Chutes DeepSeek V3 — paid tier, high quality, but 400s on json_object mode
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 16000 });
   }
@@ -1150,14 +1159,16 @@ function isRateLimitError(err: unknown): boolean {
   if (err instanceof Error) {
     if (
       err.message.includes('429') ||
+      err.message.includes('413') ||           // Groq: "413 Request too large ... tokens per minute"
       err.message.toLowerCase().includes('rate limit') ||
       err.message.toLowerCase().includes('too many') ||
+      err.message.toLowerCase().includes('too large') ||
       err.message.toLowerCase().includes('timed out')
     ) return true;
     if ('status' in err) {
       const status = (err as { status: number }).status;
-      // Treat 429 and 5xx (server-side unavailable) as "skip to next model"
-      if (status === 429 || (status >= 500 && status < 600)) return true;
+      // 429 = rate limit, 413 = request too large (Groq TPM), 5xx = server unavailable
+      if (status === 429 || status === 413 || (status >= 500 && status < 600)) return true;
     }
   }
   return false;
@@ -1180,6 +1191,10 @@ async function generateWithModel(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    // response_format json_object is only supported by Groq, Cerebras, Gemini, Mistral.
+    // Chutes and SambaNova return 400 if this param is sent.
+    const supportsJsonMode = ['groq', 'cerebras', 'gemini', 'mistral'].includes(cfg.provider);
+
     const completion = await client.chat.completions.create(
       {
         model: cfg.model,
@@ -1189,7 +1204,7 @@ async function generateWithModel(
         ],
         max_tokens: cfg.max_tokens,
         temperature: 0.2,
-        response_format: { type: 'json_object' },
+        ...(supportsJsonMode ? { response_format: { type: 'json_object' } } : {}),
       },
       { signal: controller.signal },
     );

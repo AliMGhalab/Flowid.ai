@@ -1179,7 +1179,7 @@ function isRateLimitError(err: unknown): boolean {
 async function generateWithModel(
   input: ProjectInput,
   cfg: ModelConfig,
-  timeoutMs = 35000, // hard per-provider timeout — leaves budget for fallback within Vercel's 60s
+  timeoutMs = 12000, // 12s per provider — fast providers (Groq/Cerebras) respond in <2s; slow ones waste <12s
 ): Promise<Record<string, unknown>> {
   const client = clientForConfig(cfg);
   const startedAt = Date.now();
@@ -1231,51 +1231,65 @@ async function generateWithModel(
   }
 }
 
+// ─── Helper: post-process a valid recommendation ─────────────────────────────
+
+function finalize(
+  recommendation: Record<string, unknown>,
+  input: ProjectInput,
+): NextResponse {
+  rewriteBudgetNotes(recommendation, input);
+  const warnings = runSanityChecks(recommendation);
+  if (warnings.length > 0) {
+    console.log(`[/api/generate] ${warnings.length} sanity-check warning(s):`, warnings.map((w) => w.code).join(', '));
+  }
+  (recommendation as Record<string, unknown>).validation_warnings = warnings;
+  return NextResponse.json({ recommendation, validation_warnings: warnings });
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
     const input: ProjectInput = await request.json();
 
-    // Walk through the model roster (Gemini → Chutes fallback)
     const models = buildModelRoster();
-    let lastError: unknown;
+    if (models.length === 0) {
+      return NextResponse.json({ error: 'No AI provider configured.' }, { status: 500 });
+    }
 
-    for (const cfg of models) {
+    // ── Phase 1: race the top 2 providers in parallel ──────────────────────
+    // Fast providers (Groq ~200ms, Cerebras ~1s) answer almost instantly.
+    // If Groq 413s, Cerebras is already running — no extra wait.
+    const raceSlice = models.slice(0, 2);
+    const fallbackSlice = models.slice(2);
+
+    const raceResult = await Promise.any(
+      raceSlice.map((cfg) =>
+        generateWithModel(input, cfg).then((rec) => ({ rec, cfg })),
+      ),
+    ).catch(() => null); // both failed → null, fall through to sequential
+
+    if (raceResult) {
+      console.log(`[/api/generate] race winner: ${raceResult.cfg.provider}/${raceResult.cfg.model}`);
+      return finalize(raceResult.rec, input);
+    }
+
+    // ── Phase 2: sequential fallback through remaining providers ──────────
+    let lastError: unknown;
+    for (const cfg of fallbackSlice) {
       try {
         const recommendation = await generateWithModel(input, cfg);
-        // Rewrite budget_notes from the actual reconciled total + user's budget,
-        // since the AI's original text often references its pre-reconciled numbers.
-        rewriteBudgetNotes(recommendation, input);
-        const warnings = runSanityChecks(recommendation);
-        if (warnings.length > 0) {
-          console.log(`[/api/generate] ${warnings.length} sanity-check warning(s):`, warnings.map((w) => w.code).join(', '));
-        }
-        // Bundle warnings INTO the recommendation so Firestore persists them
-        (recommendation as Record<string, unknown>).validation_warnings = warnings;
-        return NextResponse.json({ recommendation, validation_warnings: warnings });
+        return finalize(recommendation, input);
       } catch (err) {
         lastError = err;
         const msg = err instanceof Error ? err.message : String(err);
         const status = (err as { status?: number })?.status ?? '—';
-        // Payment-required / credit-exhausted errors should ALWAYS skip to next provider
-        const isBillingError =
-          status === 402 ||
-          msg.toLowerCase().includes('payment') ||
-          msg.toLowerCase().includes('credit') ||
-          msg.toLowerCase().includes('billing') ||
-          msg.toLowerCase().includes('insufficient');
-        if (isRateLimitError(err) || isBillingError) {
-          console.warn(`[/api/generate] ${cfg.model} unavailable (status=${status}, billing=${isBillingError}): ${msg.slice(0, 150)} — trying next provider`);
-          continue;
-        }
-        console.warn(`[/api/generate] parse/validation error on ${cfg.model} (status=${status}): ${msg.slice(0, 150)} — trying next provider`);
+        console.warn(`[/api/generate] ${cfg.provider}/${cfg.model} failed (status=${status}): ${msg.slice(0, 150)} — trying next`);
         continue;
       }
     }
 
-    // All models exhausted
-    throw lastError ?? new Error('All AI models failed');
+    throw lastError ?? new Error('All AI providers failed');
 
   } catch (error) {
     console.error('[/api/generate]', error);

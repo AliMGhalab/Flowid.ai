@@ -1015,15 +1015,10 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 5000 });
   }
-  // #1b Groq Llama 3.1 8B — SEPARATE TPM bucket (20k TPM vs 12k for 70b).
-  // Smaller model but fast and reliable when 70b is rate-limited.
+  // #1b Groq Llama 3.1 8B — separate TPM bucket. Context window is 8192 tokens;
+  // prompt ~4k + max_tokens 3k = 7k, safely under the 8192 limit.
   if (process.env.GROQ_API_KEY) {
-    roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 5000 });
-  }
-  // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier.
-  // Model name is 'llama3.3-70b' (no hyphen after llama, confirmed Cerebras API name).
-  if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'llama3.3-70b', max_tokens: 8000 });
+    roster.push({ provider: 'groq', model: 'llama-3.1-8b-instant', max_tokens: 3000 });
   }
   // #3 Gemini 2.0 Flash — Google infra, independent rate-limit bucket.
   if (process.env.GEMINI_API_KEY) {

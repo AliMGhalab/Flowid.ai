@@ -89,9 +89,9 @@ Language: English. Money: MYR. Standards: DOSH FMA 1967, BOMBA UBBL, SIRIM, PETR
 
 You are an AGENT. Do the work. Do not shortcut the BOM.`;
 
-// Vercel function ceiling is 120s. At ~10s per tool round-trip, 25 iterations
-// blows past the budget. Capped at 10 so the agent finishes within the window.
-const MAX_ITERATIONS = 10;
+// Vercel ceiling = 120s. Qwen3.5-397B takes ~12s/iteration.
+// 8 iterations × 12s = 96s + overhead = safe within 120s.
+const MAX_ITERATIONS = 8;
 const MAX_TOOL_RESULT_SIZE = 20000; // chars — finalize_design JSON can be 10-15k; keep it intact
 
 function truncate(s: string, max = MAX_TOOL_RESULT_SIZE): string {
@@ -166,7 +166,7 @@ export async function runAgentLoop(
   // Vercel function ceiling is 120s. Hard stop the loop at 95s so we have time
   // to return JSON. Per-iteration AbortController kills hung LLM calls at 25s.
   const loopStart = Date.now();
-  const LOOP_DEADLINE_MS = 95_000;
+  const LOOP_DEADLINE_MS = 75_000; // 75s loop budget — leaves 45s for next provider if this one stalls
 
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
     if (Date.now() - loopStart > LOOP_DEADLINE_MS) {
@@ -176,7 +176,7 @@ export async function runAgentLoop(
     // tool_choice "required" is unsupported on Mistral and some other providers.
     // "auto" works everywhere; system prompt strongly directs the LLM to use tools.
     const iterController = new AbortController();
-    const iterTimer = setTimeout(() => iterController.abort(), 30_000);
+    const iterTimer = setTimeout(() => iterController.abort(), 12_000); // 12s per iteration keeps 8 iters inside 75s budget
     let completion;
     try {
       completion = await cfg.client.chat.completions.create(

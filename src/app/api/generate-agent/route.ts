@@ -57,21 +57,17 @@ function buildAgentChain(): AgentProvider[] {
   // calling (confirmed via /v1/models endpoint). Classic path uses Groq/Cerebras
   // so there is zero overlap on rate-limit buckets.
 
-  // #1 Kimi K2.6 — Moonshot AI's latest, strong tool calling, reasoning
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-kimi', model: 'moonshotai/Kimi-K2.6-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #2 Qwen3.5 397B — massive model, excellent instruction following
+  // #1 Qwen3.5-397B — confirmed working: 7 iterations in ~60s. Primary.
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-qwen397', model: 'Qwen/Qwen3.5-397B-A17B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
-  // #3 Kimi K2.5 — backup Kimi
-  if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-kimi2', model: 'moonshotai/Kimi-K2.5-TEE', client: getChutesClient(), max_tokens: 8000 });
-  }
-  // #4 DeepSeek V3.2 — strong quality, known tool calling support
+  // #2 DeepSeek V3.2 — strong tool calling, backup
   if (process.env.CHUTES_API_KEY) {
     chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
+  }
+  // #3 Qwen3-32B — smaller, faster fallback
+  if (process.env.CHUTES_API_KEY) {
+    chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
   }
   // #5 Mistral Large — different infra fallback
   if (process.env.MISTRAL_API_KEY) {

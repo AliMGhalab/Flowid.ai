@@ -403,10 +403,7 @@ export default function NewProjectPage() {
         const fallbackReason = fallbackBody?.diagnostic ?? fallbackBody?.error ?? `HTTP ${res.status}`;
         console.warn('[new-project] agent endpoint failed — falling back to classic /api/generate. Reason:', fallbackReason);
         setStatusMsg('Agent pipeline unavailable — falling back to classic generation…');
-        toast.error(
-          `Agent pipeline failed: ${String(fallbackReason).slice(0, 120)}. Falling back to classic mode — output may have fewer features.`,
-          { duration: 8000 },
-        );
+        toast('Agent providers busy — using classic generation instead.', { duration: 4000 });
         res = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

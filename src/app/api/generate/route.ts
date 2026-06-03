@@ -1119,27 +1119,26 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.GROQ_API_KEY) {
     roster.push({ provider: 'groq', model: 'llama-3.3-70b-versatile', max_tokens: 8000 });
   }
-  // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier, 20k output.
-  // IMPORTANT: model MUST be 'llama-3.3-70b' (Cerebras API name, not HuggingFace ID).
+  // #2 Cerebras Llama 3.3 70B — WSE silicon, very fast, generous free tier.
+  // Model name is 'llama3.3-70b' (no hyphen after llama, confirmed Cerebras API name).
   if (process.env.CEREBRAS_API_KEY) {
-    roster.push({ provider: 'cerebras', model: 'llama-3.3-70b', max_tokens: 20000 });
+    roster.push({ provider: 'cerebras', model: 'llama3.3-70b', max_tokens: 8000 });
   }
-  // #3 Gemini 2.0 Flash — completely different infra (Google), 15 req/min free,
-  // no TPM cap. Best fallback when Groq/Cerebras are rate-limited.
+  // #3 Gemini 2.0 Flash — Google infra, independent rate-limit bucket.
   if (process.env.GEMINI_API_KEY) {
-    roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 16000 });
+    roster.push({ provider: 'gemini', model: 'gemini-2.0-flash', max_tokens: 8000 });
   }
   // #4 Mistral Medium — native JSON mode, different vendor
   if (process.env.MISTRAL_API_KEY) {
-    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 10000 });
+    roster.push({ provider: 'mistral', model: 'mistral-medium-latest', max_tokens: 8000 });
   }
-  // #5 SambaNova Llama 3.3 70B — specialised hardware, frequent 429s
+  // #5 SambaNova — Llama 3.3 70B max output is 4096 tokens
   if (process.env.SAMBANOVA_API_KEY) {
-    roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 10000 });
+    roster.push({ provider: 'sambanova', model: 'Meta-Llama-3.3-70B-Instruct', max_tokens: 4096 });
   }
-  // #6 Chutes DeepSeek V3 — paid tier, high quality, but 400s on json_object mode
+  // #6 Chutes DeepSeek V3 — DeepSeek V3 max output is 8192 tokens; sending >8192 causes 400
   if (process.env.CHUTES_API_KEY) {
-    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 16000 });
+    roster.push({ provider: 'chutes', model: 'deepseek-ai/DeepSeek-V3.2-TEE', max_tokens: 8000 });
   }
 
   return roster;
@@ -1265,7 +1264,12 @@ export async function POST(request: NextRequest) {
     const raceResult = await Promise.any(
       raceSlice.map((cfg) => {
         const p = generateWithModel(input, cfg).then((rec) => ({ rec, cfg }));
-        p.catch(() => {}); // suppress unhandled rejection from race loser
+        p.catch((err) => {
+          // Log race failure so we can diagnose provider issues in Vercel logs
+          const msg = err instanceof Error ? err.message : String(err);
+          const status = (err as { status?: number })?.status ?? '—';
+          console.warn(`[/api/generate] race: ${cfg.provider}/${cfg.model} failed (status=${status}): ${msg.slice(0, 120)}`);
+        });
         return p;
       }),
     ).catch(() => null); // both failed → null, fall through to sequential

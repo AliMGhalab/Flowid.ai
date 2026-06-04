@@ -21,62 +21,6 @@ export const AGENT_TOOLS = [
   {
     type: 'function' as const,
     function: {
-      name: 'derive_process_parameters',
-      description:
-        'Derives realistic design flow rate, operating pressure, design pressure, temperature, and fluid velocity for a fluid system from the application description. Always call this BEFORE sizing anything.',
-      parameters: {
-        type: 'object',
-        properties: {
-          industry: { type: 'string' },
-          fluid: { type: 'string' },
-          application: { type: 'string', description: 'free-text application summary' },
-          flow_rate_provided_m3hr: { type: 'number', description: 'If the user provided a flow rate, pass it here. Otherwise omit.' },
-        },
-        required: ['industry', 'fluid', 'application'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'calculate_hydraulics',
-      description:
-        'Computes pipe velocity, Reynolds number, flow regime (laminar/transitional/turbulent), Darcy friction factor, and pressure drop per 100 m. Use this after process parameters are known.',
-      parameters: {
-        type: 'object',
-        properties: {
-          flow_m3hr: { type: 'number' },
-          pipe_diameter_inch: { type: 'number' },
-          operating_temp_c: { type: 'number' },
-          fluid: { type: 'string' },
-        },
-        required: ['flow_m3hr', 'pipe_diameter_inch', 'operating_temp_c'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'size_pump_motor',
-      description:
-        'Computes pump shaft power (kW), selects motor size on standard IEC 60034 step, verifies NPSH margin per API 610. Call after hydraulics are known.',
-      parameters: {
-        type: 'object',
-        properties: {
-          flow_m3hr: { type: 'number' },
-          total_head_m: { type: 'number' },
-          fluid_density_kgm3: { type: 'number', description: 'kg/m³, e.g. 994 for water at 35°C' },
-          pump_efficiency: { type: 'number', description: '0.0 to 1.0, typical 0.65-0.75' },
-          static_head_m: { type: 'number' },
-          friction_head_m: { type: 'number' },
-        },
-        required: ['flow_m3hr', 'total_head_m', 'fluid_density_kgm3'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
       name: 'lookup_malaysian_suppliers',
       description:
         'Looks up real Malaysian suppliers for one OR MORE component categories in a single call, ranked by proximity to the project state. Pass ALL categories you need (pump, valve, instrument, piping, vessel, electrical, safety, fitting) at once to save round-trips.',
@@ -94,40 +38,6 @@ export const AGENT_TOOLS = [
           project_state: { type: 'string', description: 'Malaysian state name (lowercase, underscored)' },
         },
         required: ['categories', 'project_state'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'check_material_compatibility',
-      description:
-        'Validates whether a proposed material is compatible with the working fluid. Returns reject + reason for known dangerous combos (e.g. HCl + carbon steel, NH3 + brass, hot CPO + galvanized).',
-      parameters: {
-        type: 'object',
-        properties: {
-          fluid: { type: 'string', description: 'fluid name from the project, e.g. "ammonia", "hydrochloric acid", "cooling water"' },
-          material: { type: 'string', description: 'proposed material, e.g. "carbon steel", "SS316", "brass"' },
-          operating_temp_c: { type: 'number' },
-        },
-        required: ['fluid', 'material'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
-      name: 'get_required_hazop_guidewords',
-      description:
-        'Returns the mandatory HAZOP guidewords that must be covered for a fluid system. Use to ensure no critical hazard category is missed.',
-      parameters: {
-        type: 'object',
-        properties: {
-          fluid: { type: 'string' },
-          design_pressure_bar: { type: 'number' },
-          is_hazardous: { type: 'boolean', description: 'true if flammable, toxic, corrosive, or high-pressure' },
-        },
-        required: ['fluid'],
       },
     },
   },
@@ -540,12 +450,7 @@ export function tool_reconcile_costs_aace(args: {
 // ── Dispatcher ──────────────────────────────────────────────────────────────
 
 export type ToolName =
-  | 'derive_process_parameters'
-  | 'calculate_hydraulics'
-  | 'size_pump_motor'
   | 'lookup_malaysian_suppliers'
-  | 'check_material_compatibility'
-  | 'get_required_hazop_guidewords'
   | 'reconcile_costs_aace'
   | 'finalize_design';
 
@@ -553,18 +458,8 @@ export function runTool(name: string, rawArgs: unknown): ToolResult {
   const args = (rawArgs && typeof rawArgs === 'object' ? rawArgs : {}) as Record<string, unknown>;
   try {
     switch (name) {
-      case 'derive_process_parameters':
-        return tool_derive_process_parameters(args as Parameters<typeof tool_derive_process_parameters>[0]);
-      case 'calculate_hydraulics':
-        return tool_calculate_hydraulics(args as Parameters<typeof tool_calculate_hydraulics>[0]);
-      case 'size_pump_motor':
-        return tool_size_pump_motor(args as Parameters<typeof tool_size_pump_motor>[0]);
       case 'lookup_malaysian_suppliers':
         return tool_lookup_malaysian_suppliers(args as Parameters<typeof tool_lookup_malaysian_suppliers>[0]);
-      case 'check_material_compatibility':
-        return tool_check_material_compatibility(args as Parameters<typeof tool_check_material_compatibility>[0]);
-      case 'get_required_hazop_guidewords':
-        return tool_get_required_hazop_guidewords(args as Parameters<typeof tool_get_required_hazop_guidewords>[0]);
       case 'reconcile_costs_aace':
         return tool_reconcile_costs_aace(args as Parameters<typeof tool_reconcile_costs_aace>[0]);
       case 'finalize_design':

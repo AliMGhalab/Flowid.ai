@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export const maxDuration = 120;
 
-const TINY_PROMPT = 'Reply with exactly this JSON and nothing else: {"ok":true}';
+const TINY_PROMPT = 'Reply with exactly this JSON and nothing else: {"ok":true}. /no_think';
 
 interface ProviderResult {
   provider: string;
@@ -28,7 +28,7 @@ async function testProvider(
       {
         model,
         messages: [{ role: 'user', content: TINY_PROMPT }],
-        max_tokens: 20,
+        max_tokens: 300,
         temperature: 0,
         ...(supportsJsonMode ? { response_format: { type: 'json_object' } } : {}),
       },
@@ -52,6 +52,7 @@ async function testProvider(
 
 export async function GET() {
   const chutes = new OpenAI({ apiKey: process.env.CHUTES_API_KEY!, baseURL: 'https://llm.chutes.ai/v1', maxRetries: 0 });
+  const zai    = new OpenAI({ apiKey: process.env.ZAI_API_KEY!, baseURL: 'https://api.z.ai/api/coding/paas/v4', maxRetries: 0 });
   const groq   = new OpenAI({ apiKey: process.env.GROQ_API_KEY!, baseURL: 'https://api.groq.com/openai/v1', maxRetries: 0 });
   const gemini = new OpenAI({ apiKey: process.env.GEMINI_API_KEY!, baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/', maxRetries: 0 });
   const mistral = new OpenAI({ apiKey: process.env.MISTRAL_API_KEY!, baseURL: 'https://api.mistral.ai/v1', maxRetries: 0 });
@@ -71,6 +72,7 @@ export async function GET() {
     () => testProvider('chutes-qwen32',  'Qwen/Qwen3-32B-TEE',                 chutes,  false, 30000),
     () => testProvider('chutes-qwen27',  'Qwen/Qwen3.6-27B-TEE',               chutes,  false, 30000),
     () => testProvider('chutes-minimax', 'MiniMaxAI/MiniMax-M2.5-TEE',         chutes,  false, 30000),
+    () => testProvider('zai-glm5',       'glm-5.1',                             zai,     false, 20000),
   ];
 
   // Run all in parallel

@@ -334,6 +334,14 @@ function getMistralClient() {
   });
 }
 
+function getZaiClient() {
+  return new OpenAI({
+    apiKey: process.env.ZAI_API_KEY!,
+    baseURL: 'https://api.z.ai/api/coding/paas/v4',
+    maxRetries: 0,
+  });
+}
+
 function getSambaNovaClient() {
   return new OpenAI({
     apiKey: process.env.SAMBANOVA_API_KEY!,
@@ -973,7 +981,7 @@ function validateRecommendation(rec: Record<string, unknown>): Record<string, un
 //  2. Chutes / DeepSeek V3  — fallback (handles large prompts)
 
 interface ModelConfig {
-  provider: 'chutes' | 'gemini' | 'mistral' | 'sambanova' | 'groq' | 'sambanova-ds';
+  provider: 'chutes' | 'gemini' | 'mistral' | 'sambanova' | 'groq' | 'sambanova-ds' | 'zai';
   model: string;
   max_tokens: number;
 }
@@ -1015,6 +1023,10 @@ function buildModelRoster(): ModelConfig[] {
   if (process.env.CHUTES_API_KEY) {
     roster.push({ provider: 'chutes', model: 'Qwen/Qwen3-32B-TEE', max_tokens: 8000 });
   }
+  // #9 Z.AI GLM-5.1 — thinking model, confirmed working
+  if (process.env.ZAI_API_KEY) {
+    roster.push({ provider: 'zai', model: 'glm-5.1', max_tokens: 8000 });
+  }
 
   return roster;
 }
@@ -1024,6 +1036,7 @@ function clientForConfig(cfg: ModelConfig) {
   if (cfg.provider === 'mistral') return getMistralClient();
   if (cfg.provider === 'sambanova') return getSambaNovaClient();
   if (cfg.provider === 'groq') return getGroqClient();
+  if (cfg.provider === 'zai') return getZaiClient();
   return getGeminiClient();
 }
 

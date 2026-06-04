@@ -35,6 +35,13 @@ function getMistralClient() {
     maxRetries: 0,
   });
 }
+function getZaiClient() {
+  return new OpenAI({
+    apiKey: process.env.ZAI_API_KEY!,
+    baseURL: 'https://api.z.ai/api/coding/paas/v4',
+    maxRetries: 0,
+  });
+}
 
 interface AgentProvider {
   provider: string;
@@ -68,6 +75,10 @@ function buildAgentChain(): AgentProvider[] {
   // #4 Mistral Medium — confirmed working
   if (process.env.MISTRAL_API_KEY) {
     chain.push({ provider: 'mistral-med', model: 'mistral-medium-latest', client: getMistralClient(), max_tokens: 3000 });
+  }
+  // #5 Z.AI GLM-5.1 — thinking model, confirmed working. Extra tokens for reasoning.
+  if (process.env.ZAI_API_KEY) {
+    chain.push({ provider: 'zai', model: 'glm-5.1', client: getZaiClient(), max_tokens: 4000 });
   }
   return chain;
 }

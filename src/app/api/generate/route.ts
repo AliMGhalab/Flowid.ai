@@ -480,7 +480,7 @@ INSTRUCTIONS:
 2. All costs in MYR. Use Malaysian market prices including SST.
 3. For suppliers: pick brands with offices or distributors nearest to ${state}. If in East Malaysia, account for extra logistics cost (10–15% premium). Calculate transportation cost separately as a line item based on shipment from supplier city to ${state}.
 4. Apply relevant Malaysian regulations (DOSH, BOMBA, SIRIM, DOE, PETRONAS PTS as applicable).
-5. SKIP the alternatives array for every component — leave "alternatives": [] to conserve output tokens for a complete BOM.
+5. For each component include 1-2 alternatives (different brand or material option) in the "alternatives" array.
 6. For EVERY component assign confidence_level (0–100): how optimal this choice is for this fluid/environment.
 7. For EVERY component assign lifespan_years (service life before major overhaul in Malaysian climate).
 8. Assign overall_confidence (0–100) for the entire recommendation.
@@ -541,7 +541,7 @@ Use water properties at operating temperature; adjust for other fluids.
 COMPACT OUTPUT CONTRACT — mandatory to fit a complete BOM in the token budget:
 • specification / notes / lifespan_notes / price_basis / design_basis / engineering_notes: MAX 12 WORDS each. Use short phrases, not sentences.
 • hazop_summary / basis fields: MAX 15 WORDS each.
-• alternatives: [] — always empty. Skip entirely.
+• alternatives: include 1-2 per component (brand or material option).
 • A BOM with 15 compact components beats 5 verbose ones every time.
 • If approaching token limit: finish components, then risks. Never cut components short.
 

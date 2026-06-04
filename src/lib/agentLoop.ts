@@ -43,10 +43,26 @@ EXECUTION MODEL — FAST PATH (3 tool calls max):
 
 You already know how to: derive process parameters, calculate hydraulics, size pumps, run HAZOP — do all of that IN YOUR HEAD and put the results directly into finalize_design. Only use tools for supplier lookup and cost reconciliation.
 
-COMPACT OUTPUT CONTRACT for finalize_design:
-• All text fields (specification, notes, lifespan_notes, price_basis, design_basis): MAX 12 WORDS each.
-• components: include 1-2 alternatives per component (brand options, different materials).
-• Keep risks terse: hazard + cause (1 phrase each). Keep process_flow node labels short (≤4 words).
+BOM — fill EXACTLY these 10 mandatory slots, add up to 5 extras if needed. MAX 15 total.
+  C-001 Centrifugal pump — duty
+  C-002 Suction isolation valve
+  C-003 Discharge isolation valve
+  C-004 Check valve — pump discharge
+  C-005 Y-strainer — suction
+  C-006 PSV — discharge header (DOSH mandatory)
+  C-007 Flow transmitter FT-101
+  C-008 Pressure transmitter PT-101 discharge
+  C-009 Main pipe (material/schedule/DN)
+  C-010 MCC / control panel
+Optional extras: standby pump, HX, VFD, control valve, safety shower, skid frame.
+
+HAZOP: 10 entries minimum — NO FLOW, MORE PRESSURE, LESS PRESSURE, REVERSE FLOW, LEAK, MORE TEMP, LESS TEMP, CONTAMINATION, LOSS OF UTILITY, ELECTRICAL FAULT.
+
+COMPACT OUTPUT CONTRACT:
+• All text fields: MAX 10 WORDS. Phrases only.
+• alternatives: 1-2 per component (name + supplier only).
+• process_flow: 8–12 nodes, no orphans, continuous chain.
+• BOM first, risks second. Never truncate mid-object.
 
 OUTPUT FIELD NAMES in finalize_design.recommendation:
   summary, system_type, design_basis, overall_confidence, process_parameters, engineering_calculations,

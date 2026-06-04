@@ -484,38 +484,27 @@ INSTRUCTIONS:
 6. For EVERY component assign confidence_level (0–100): how optimal this choice is for this fluid/environment.
 7. For EVERY component assign lifespan_years (service life before major overhaul in Malaysian climate).
 8. Assign overall_confidence (0–100) for the entire recommendation.
-9. COMPLETE BOM — procurement-ready, every physical item as its own line. Walk the P&ID from source to destination. Include all that apply (presence = engineering necessity; quantity = scale/budget):
+9. BOM — fill EXACTLY these 10 mandatory slots, then add up to 5 extras if genuinely needed. MAX 15 components total.
+MANDATORY SLOTS (one line each, compact):
+  C-001 Centrifugal pump — duty (sized to flow/head)
+  C-002 Gate/ball valve — suction isolation
+  C-003 Gate/ball valve — discharge isolation
+  C-004 Check valve — pump discharge (prevents backflow)
+  C-005 Y-strainer — pump suction (DOSH)
+  C-006 PSV — discharge header (DOSH FMA 1967 mandatory)
+  C-007 Flow transmitter — main line (FT-101)
+  C-008 Pressure transmitter — pump discharge (PT-101)
+  C-009 Main pipe — source to destination (material/schedule/DN)
+  C-010 MCC / control panel (motor starter + instruments)
+OPTIONAL EXTRAS (add only if system needs it): standby pump, HX, expansion vessel, VFD, control valve, safety shower (acid/caustic), fire detector (flammables), skid frame.
 
-Rotating: duty pump (type + kW), standby pump if criticality warrants, mechanical seals, couplings + guards.
-Vessels: suction header/feed tank, discharge header, expansion vessel (closed systems), dosing pot, separator/filter housing.
-Valves: suction isolation, discharge isolation, check valve (per pump discharge), PSV (every pressurised vessel — DOSH), control valve, drain valves (low points), vent valves (high points), sample valves, bypass valve set.
-Piping & fittings: pipe (material/schedule/length), elbows-tees-reducers lot, flanges + gaskets set, flex hose/expansion joints at pump connections, supports/clamps/hangers.
-Instrumentation: FT on main line, PT on suction + discharge + key points, local gauges at pump nozzles, TT if temp is a process variable, LT on every vessel, dP across filters/HX, analytical (pH/conductivity/turbidity) if fluid quality matters.
-Electrical/control: MCC or VFD panel per motor (combine if co-located), local control panel, power cables sized to kW + run length, instrument cables, earthing (mandatory for flammables — DOSH).
-Structural: skid/base frame, pipe support steelwork, bund/drip tray for hazardous fluids (DOE), access platforms if elevated.
-Safety: safety shower + eyewash (chem/acid/caustic), fire & gas detectors (flammables — BOMBA), thermal insulation, heat tracing (congealing/freezing fluids), commissioning strainer + spares kit.
+10. HAZOP — 10 distinct entries minimum, one per guideword: NO FLOW, MORE PRESSURE, LESS PRESSURE, REVERSE FLOW, LEAK, MORE TEMP, LESS TEMP, CONTAMINATION, LOSS OF UTILITY, ELECTRICAL FAULT. Cite DOSH/BOMBA/SIRIM in mitigations.
 
-SELF-CHECK: Can the system start up, run, be isolated for maintenance, drained, vented, instrumented, controlled, overpressure-protected, and safely shut down — using only your listed components? If not, add the missing items.
-
-10. HAZOP — apply standard guidewords across main process line + nodes (suction, discharge, control valve, vessels, HX). Generate a distinct risk entry for each: NO FLOW, MORE FLOW, LESS FLOW, REVERSE FLOW, MORE PRESSURE, LESS PRESSURE, MORE TEMP, LESS TEMP, CONTAMINATION, LEAK/RELEASE, LOSS OF UTILITY, MAINTENANCE, CORROSION/EROSION, ELECTRICAL FAULT.
-TARGET: ≥20 entries, all distinct hazard/cause/consequence. Cite DOSH FMA 1967, BOMBA UBBL, SIRIM, or DOE in mitigations where applicable.
-
-11. MANDATORY blocks — never null/empty:
-- piping: real material/diameter/schedule/connection/notes
-- instrumentation: ≥4 tags — FT (main), PT (discharge), PT (suction or vessel), TT (if temp matters); add LT for vessels, AT/QT for chemistry
-- risk_assessment.risks: ≥20 entries from HAZOP above
-- engineering_calculations: every applicable field computed
-- process_flow: minimum 10 nodes, minimum 9 edges — see rules below
-
-PROCESS FLOW DIAGRAM (P&ID) — this drives a visual diagram. Quality requirements:
-- MINIMUM 10 nodes, IDEALLY 12-18. Cover: source/tank → suction isolation → strainer → pump(s) → check valve → instruments (PT/FT) → discharge valve → PSV → process equipment (HX/vessel/etc.) → control valve → expansion → destination.
-- EVERY node must be connected — no orphan nodes. Each node appears in at least one edge.
-- Edges form a CONTINUOUS chain from source to destination. Walk the JSON in order — there should be a path from the first vessel to the last.
-- Use IDs that MATCH your BOM component IDs where possible (e.g. if BOM has C-001 = main pump, use "P-101" or "C-001" consistently in both).
-- node.type must be one of: "vessel", "pump", "valve", "instrument", "equipment", "fitting", "other".
-- Optional edge.label for pipe size / fluid (e.g. "DN100 SS316L", "DN50 PVC").
-- Include redundancy where the system has it: duty + standby pumps both connect to same header.
-- For complex systems include bypass loops, sample lines, drain lines as branch edges.
+11. MANDATORY blocks:
+- piping: material/diameter/schedule/connection
+- instrumentation: FT-101, PT-101, PT-102 (suction), TT-101 if temp matters
+- engineering_calculations: all fields computed
+- process_flow: 8–12 nodes, continuous chain source→destination, no orphans, node.type one of vessel/pump/valve/instrument/equipment/fitting/other
 
 12. COST INTEGRITY — every monetary value must trace back to a source:
 - Every component MUST have unit_cost_myr (real catalogue / market price) AND price_basis (source: "Grundfos Malaysia May 2026 list price", "based on supplier quote from KITZ PJ", "Malaysian SIRIM-listed pricing", etc.).
@@ -538,12 +527,11 @@ PROCESS FLOW DIAGRAM (P&ID) — this drives a visual diagram. Quality requiremen
 - ΔP/L = f × (ρ × v²) / (2 × D), convert to bar/100m
 Use water properties at operating temperature; adjust for other fluids.
 
-COMPACT OUTPUT CONTRACT — mandatory to fit a complete BOM in the token budget:
-• specification / notes / lifespan_notes / price_basis / design_basis / engineering_notes: MAX 12 WORDS each. Use short phrases, not sentences.
-• hazop_summary / basis fields: MAX 15 WORDS each.
-• alternatives: include 1-2 per component (brand or material option).
-• A BOM with 15 compact components beats 5 verbose ones every time.
-• If approaching token limit: finish components, then risks. Never cut components short.
+COMPACT OUTPUT CONTRACT:
+• All text fields (specification/notes/lifespan_notes/price_basis/design_basis): MAX 10 WORDS. Phrases only.
+• hazop_summary / basis: MAX 12 WORDS.
+• alternatives: 1-2 per component (brand or material swap only, no full object needed — just name + supplier).
+• BOM first, risks second. Never truncate a component mid-object.
 
 Return ONLY this JSON. components is generated FIRST so it cannot be truncated by token limits:
 {

@@ -102,7 +102,7 @@ const FEATURES = [
     icon: RefreshCw,
     title: 'Component Alternatives',
     description:
-      'Two alternatives per component from different Malaysian suppliers — with cost comparison and delivery advantages, so procurement has options.',
+      'Up to 2 alternatives per component from different Malaysian suppliers — brand or material swap options with cost comparison, so procurement has choices.',
     color: 'text-amber-400',
     bg: 'bg-amber-400/10',
   },
@@ -133,9 +133,9 @@ const STEPS = [
   },
   {
     number: '02',
-    title: 'Multi-Agent AI Pipeline',
+    title: 'AI Pipeline',
     description:
-      'Six specialised agents work the problem: Planner sets process parameters, BOM Agent picks Malaysian suppliers, Hydraulics Agent runs NPSH/Reynolds/motor sizing, HAZOP Agent applies guidewords, Cost Agent rolls up MYR pricing, P&ID Agent builds the flow diagram.',
+      'The AI determines process parameters, sizes equipment, runs NPSH and Reynolds calculations, applies HAZOP guidewords, and builds the full BOM using real Malaysian supplier data and AACE cost methodology. An optional Agentic BETA mode uses dynamic tool calling for deeper supplier lookup and cost reconciliation.',
   },
   {
     number: '03',
@@ -457,7 +457,7 @@ export default function LandingPage() {
             <h2 className="mb-3 text-3xl font-bold sm:text-4xl">
               How It <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Works</span>
             </h2>
-            <p className="text-slate-400">From description to full engineering package in 3 steps</p>
+            <p className="text-slate-400">From description to full engineering package in 4 steps</p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3">
             {STEPS.map((s, i) => (
@@ -555,7 +555,7 @@ export default function LandingPage() {
                   </div>
                 ))}
                 <div className="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/40 px-3 py-2">
-                  <span className="font-mono text-xs text-slate-500 w-14 shrink-0">+17</span>
+                  <span className="font-mono text-xs text-slate-500 w-14 shrink-0">+7</span>
                   <span className="flex-1 text-xs text-slate-500 italic">more components…</span>
                 </div>
               </div>

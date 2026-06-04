@@ -170,7 +170,8 @@ export async function runAgentLoop(
     } catch (e) {
       clearTimeout(iterTimer);
       if (iterController.signal.aborted) {
-        console.warn(`[agentLoop] iter ${iter} aborted at 20s on ${cfg.model}`);
+        const elapsed = Date.now() - loopStart;
+        console.warn(`[agentLoop] iter ${iter} aborted at ${Math.round(elapsed / 1000)}s on ${cfg.model}`);
         throw new Error(`Agent provider ${cfg.model} stalled past ${Math.round(elapsed / 1000)}s`);
       }
       throw e;

@@ -34,7 +34,7 @@ interface ProviderConfig {
   max_tokens?: number;
 }
 
-const AGENT_SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer running as an autonomous agent. Your job is to walk a P&ID end-to-end and produce a complete procurement-ready specification.
+const AGENT_SYSTEM_PROMPT = `You are a senior Malaysian industrial fluid systems engineer running as an autonomous agent. Your job is to walk a P&ID end-to-end and produce a complete procurement-ready specification. /no_think
 
 EXECUTION MODEL:
 You have TOOLS available. For each request:

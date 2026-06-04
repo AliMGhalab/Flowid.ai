@@ -50,22 +50,24 @@ function buildAgentChain(): AgentProvider[] {
   // calling (confirmed via /v1/models endpoint). Classic path uses Groq/Cerebras
   // so there is zero overlap on rate-limit buckets.
 
-  // Health-check confirmed working models only:
+  // Health-check confirmed working models only.
+  // max_tokens=3000: tool calls need <500 tokens; finalize_design needs ~3000.
+  // Keeping it low reduces queue time at peak load significantly.
   // #1 Chutes DeepSeek V3.2 TEE — confirmed working (5s response)
   if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 8000 });
+    chain.push({ provider: 'chutes-deepseek', model: 'deepseek-ai/DeepSeek-V3.2-TEE', client: getChutesClient(), max_tokens: 3000 });
   }
   // #2 Chutes Qwen3-32B TEE — confirmed working (1.7s response)
   if (process.env.CHUTES_API_KEY) {
-    chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 8000 });
+    chain.push({ provider: 'chutes-qwen32', model: 'Qwen/Qwen3-32B-TEE', client: getChutesClient(), max_tokens: 3000 });
   }
   // #3 Mistral Large — confirmed working family (medium=11s, large similar)
   if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 8000 });
+    chain.push({ provider: 'mistral', model: 'mistral-large-latest', client: getMistralClient(), max_tokens: 3000 });
   }
   // #4 Mistral Medium — confirmed working
   if (process.env.MISTRAL_API_KEY) {
-    chain.push({ provider: 'mistral-med', model: 'mistral-medium-latest', client: getMistralClient(), max_tokens: 8000 });
+    chain.push({ provider: 'mistral-med', model: 'mistral-medium-latest', client: getMistralClient(), max_tokens: 3000 });
   }
   return chain;
 }

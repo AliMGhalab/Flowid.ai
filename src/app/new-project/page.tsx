@@ -286,6 +286,23 @@ export default function NewProjectPage() {
   // Agentic mode toggle — when ON, calls /api/generate-agent (dynamic tool calling)
   //                       when OFF, calls /api/generate (single-call chain — proven)
   const [useAgentMode, setUseAgentMode] = useState(false);
+  const [agentAvail, setAgentAvail] = useState<'unknown' | 'checking' | 'available' | 'busy'>('unknown');
+
+  async function checkAgentAvailability() {
+    setAgentAvail('checking');
+    try {
+      const res = await fetch('/api/health-check');
+      const data = await res.json();
+      // Agent providers: chutes-deepseek, chutes-qwen32, mistral-medium, mistral (large)
+      const agentProviders = ['chutes-deepseek', 'chutes-qwen32', 'mistral-medium', 'mistral'];
+      const anyUp = data.results?.some(
+        (r: { provider: string; status: string }) => agentProviders.includes(r.provider) && r.status === 'ok'
+      );
+      setAgentAvail(anyUp ? 'available' : 'busy');
+    } catch {
+      setAgentAvail('busy');
+    }
+  }
 
   // Restore the user's preference across sessions
   useEffect(() => {
@@ -509,6 +526,22 @@ export default function NewProjectPage() {
               ? 'ON — the LLM dynamically calls tools (hydraulics calc, supplier lookup, material check, HAZOP audit, AACE cost reconciler) and reasons about each step. Auto-falls-back to classic pipeline if the agent fails.'
               : 'OFF — uses the classic single-call pipeline with post-validation. Proven and fast. Switch ON to use the new tool-calling agent.'}
           </p>
+          <button
+            type="button"
+            onClick={checkAgentAvailability}
+            disabled={agentAvail === 'checking'}
+            className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 disabled:opacity-50 transition-colors"
+          >
+            {agentAvail === 'checking' ? (
+              <><span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />Checking…</>
+            ) : agentAvail === 'available' ? (
+              <><span className="h-2 w-2 rounded-full bg-green-400" />Agent available now</>
+            ) : agentAvail === 'busy' ? (
+              <><span className="h-2 w-2 rounded-full bg-red-400" />Agents busy — classic will be used</>
+            ) : (
+              <><span className="h-2 w-2 rounded-full bg-slate-500" />Check agent availability</>
+            )}
+          </button>
         </div>
         <button
           type="button"

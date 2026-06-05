@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
-import { createProject, computeInputHash, findCachedProject } from '@/lib/firestore';
+import { createProject, computeInputHash } from '@/lib/firestore';
 import type { ProjectInput } from '@/types';
 import { Droplets, Loader2, ChevronDown, AlertCircle, Zap, MapPin, Scale, FileText, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';

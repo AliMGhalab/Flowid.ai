@@ -386,18 +386,6 @@ export default function NewProjectPage() {
       //    the engineer (and judges, during demo) can SEE the tool-calling pipeline
       //    execute in real time. Cache only applies to classic mode.
       const inputHash = await computeInputHash(form);
-      if (!useAgentMode) {
-        const cached = await findCachedProject(user.uid, inputHash);
-        if (cached) {
-          setAgentStep(6);
-          setStatusMsg('Found identical project — returning cached result…');
-          toast.success('Identical project found — returning cached result');
-          // Small UX pause so the user can see "cache hit" feedback before redirect
-          await new Promise((r) => setTimeout(r, 600));
-          router.push(`/project/${cached.id}?from=cache`);
-          return;
-        }
-      }
 
       // Sequenced progress messages — cosmetic timers, not real server events
       timers.push(setTimeout(() => { setAgentStep(1); setStatusMsg('Selecting Malaysian suppliers and sizing equipment…'); }, 6000));

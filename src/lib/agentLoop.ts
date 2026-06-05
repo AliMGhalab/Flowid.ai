@@ -60,7 +60,7 @@ HAZOP: 10 entries minimum — NO FLOW, MORE PRESSURE, LESS PRESSURE, REVERSE FLO
 
 COMPACT OUTPUT CONTRACT:
 • All text fields: MAX 10 WORDS. Phrases only.
-• alternatives: 1-2 per component — include name, supplier, model, reason (max 8 words), unit_cost_myr, total_cost_myr (quantity × unit_cost_myr).
+• alternatives: omit entirely — do NOT include alternatives arrays.
 • process_flow: 8–12 nodes, no orphans, continuous chain.
 • BOM first, risks second. Never truncate mid-object.
 

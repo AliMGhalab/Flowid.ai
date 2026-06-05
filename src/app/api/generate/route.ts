@@ -530,7 +530,7 @@ Use water properties at operating temperature; adjust for other fluids.
 COMPACT OUTPUT CONTRACT:
 • All text fields (specification/notes/lifespan_notes/price_basis/design_basis): MAX 10 WORDS. Phrases only.
 • hazop_summary / basis: MAX 12 WORDS.
-• alternatives: 1-2 per component (brand or material swap only, no full object needed — just name + supplier).
+• alternatives: 1-2 per component — include name, supplier, model, reason (max 8 words), unit_cost_myr, total_cost_myr (quantity × unit_cost_myr).
 • BOM first, risks second. Never truncate a component mid-object.
 
 Return ONLY this JSON. components is generated FIRST so it cannot be truncated by token limits:
@@ -565,7 +565,7 @@ Return ONLY this JSON. components is generated FIRST so it cannot be truncated b
       "lifespan_years": 15,
       "lifespan_notes": "SS316 body; MY humidity allowance",
       "price_basis": "Grundfos MY 2026 list",
-      "alternatives": []
+      "alternatives": [{"name":"KSB Etanorm","supplier":"KSB Malaysia, KL","model":"Etanorm 040-025-160","reason":"Budget option, same duty point","unit_cost_myr":9500,"total_cost_myr":9500}]
     }
   ],
   "engineering_calculations": {
